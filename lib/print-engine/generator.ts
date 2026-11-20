@@ -1,5 +1,6 @@
 import { checkProductionFileUnlockGate, findProofState } from "../proofs/proof-engine.ts";
 import { getOrderById } from "../orders/order-store.ts";
+import { getDivisionProductionSpec } from "./specs.ts";
 
 export interface PrintFileOptions {
   resolutionDpi: number; // 300 DPI standard
@@ -86,7 +87,15 @@ export function generateProductionPrintFile(
   const activeRevision = proofState?.revisions.find((r) => r.versionNumber === proofState.currentVersion) ||
     proofState?.revisions[proofState.revisions.length - 1];
 
-  const opts: PrintFileOptions = { ...DEFAULT_PRINT_OPTIONS, ...customOptions };
+  const divisionSlug = storedOrder?.divisionSlug || "labels";
+  const divisionSpec = getDivisionProductionSpec(divisionSlug);
+  const opts: PrintFileOptions = {
+    ...DEFAULT_PRINT_OPTIONS,
+    bleedMm: divisionSpec.defaultBleedMm,
+    resolutionDpi: divisionSpec.resolutionDpi,
+    colorProfile: divisionSpec.colorMode,
+    ...customOptions,
+  };
 
   // 3. Prepress Geometry Calculations
   const bleedMm = opts.bleedMm;

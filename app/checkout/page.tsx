@@ -55,6 +55,8 @@ function CheckoutContent() {
   const [cardNumber, setCardNumber] = useState("4242 •••• •••• 4242");
   const [expiry, setExpiry] = useState("12/28");
   const [cvc, setCvc] = useState("•••");
+  const [paymentSimulationMode, setPaymentSimulationMode] = useState<"success" | "decline" | "cancel">("success");
+  const [paymentError, setPaymentError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [completedOrder, setCompletedOrder] = useState<{
     orderNumber: string;
@@ -92,6 +94,7 @@ function CheckoutContent() {
   const handlePayAndOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsProcessing(true);
+    setPaymentError(null);
 
     try {
       const currentUser = user
@@ -108,7 +111,7 @@ function CheckoutContent() {
             role: "customer",
           };
 
-      // 1. Create Checkout Session via Server API
+      // 1. Create Checkout Session via Server API (Server recalculates prices and VAT)
       const sessionRes = await fetch("/api/checkout/create-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -128,7 +131,49 @@ function CheckoutContent() {
       const sessionData = await sessionRes.json();
       if (!sessionRes.ok) throw new Error(sessionData.error || "Failed to create checkout session");
 
-      // 2. Simulate Webhook Completion (Stripe checkout.session.completed)
+      // 2. Handle Simulation States: Success vs Decline vs Cancel
+      if (paymentSimulationMode === "cancel") {
+        await fetch("/api/checkout/webhook", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: `evt_cancel_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+            type: "checkout.session.cancelled",
+            data: {
+              object: {
+                id: sessionData.sessionId,
+                order_id: sessionData.orderId,
+                payment_status: "cancelled",
+              },
+            },
+          }),
+        });
+        setPaymentError("⚠️ Payment Cancelled: You cancelled the checkout session. Your order remains in draft pending status.");
+        return;
+      }
+
+      if (paymentSimulationMode === "decline") {
+        await fetch("/api/checkout/webhook", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: `evt_fail_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+            type: "checkout.session.failed",
+            data: {
+              object: {
+                id: sessionData.sessionId,
+                order_id: sessionData.orderId,
+                payment_status: "failed",
+                decline_reason: "Card declined: Insufficient funds (Simulated failure condition).",
+              },
+            },
+          }),
+        });
+        setPaymentError("❌ Payment Declined: The bank declined the transaction (Simulated failure: Insufficient funds). Please select 'Simulate Success' or retry.");
+        return;
+      }
+
+      // 3. Simulate Successful Webhook Completion
       const webhookRes = await fetch("/api/checkout/webhook", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -160,7 +205,7 @@ function CheckoutContent() {
         invoiceNumber: `INV-${sessionData.orderNumber.replace("ORD-", "")}`,
       });
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Payment processing failed");
+      setPaymentError(err instanceof Error ? err.message : "Payment processing failed");
     } finally {
       setIsProcessing(false);
     }
@@ -350,24 +395,90 @@ function CheckoutContent() {
             </div>
           </Card>
 
-          {/* Payment Section (Simulated Stripe Test Mode) */}
-          <Card className="border border-[#13171C]">
+          {/* Payment Section (Internal Simulated Payment Workflow) */}
+          <Card className="border-2 border-[#13171C]">
             <CardHeader
               tag="PAYMENT METHOD"
-              title="2. Simulated Stripe Card Checkout"
-              subtitle="Level 2 Prototype: Test Mode. Zero actual money charged."
+              title="2. Simulated Payment Workflow"
+              subtitle="Internal simulated payment workflow. No external paid accounts or Stripe keys required."
               action={
-                <span className="inline-flex items-center gap-1 text-[11px] font-mono text-[#E65A28] font-bold">
-                  <IconShield className="w-3.5 h-3.5" /> TEST MODE ACTIVE
+                <span className="inline-flex items-center gap-1 text-[11px] font-mono text-[#E65A28] font-bold bg-orange-50 px-2 py-0.5 rounded border border-orange-200">
+                  <IconShield className="w-3.5 h-3.5" /> DEMO SIMULATION
                 </span>
               }
             />
 
-            <div className="p-3 bg-amber-50 border border-amber-300 rounded text-xs text-amber-900 mb-4 font-mono">
-              <strong>Compliance Notice:</strong> Real card details are never stored or transmitted in plain text. Test cards below are strictly sandbox fixtures.
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded text-xs text-blue-900 mb-4 font-mono space-y-1">
+              <div><strong>Internal Architecture Notice:</strong> Operating in functional internal simulation mode.</div>
+              <div className="text-[11px] text-blue-700">All prices and VAT are recalculated on the server. Replaceable with live Stripe API when keys are configured.</div>
             </div>
 
+            {paymentError && (
+              <div className="p-3.5 bg-red-50 border-2 border-red-400 rounded text-xs text-red-900 mb-4 font-mono flex items-start justify-between">
+                <div>
+                  <strong className="block font-bold">Transaction Status:</strong>
+                  <span>{paymentError}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPaymentError(null)}
+                  className="font-bold underline text-red-800 ml-3"
+                >
+                  Dismiss
+                </button>
+              </div>
+            )}
+
             <form onSubmit={handlePayAndOrder} className="space-y-4">
+              {/* Simulation Outcome Selector */}
+              <div>
+                <Label>Simulated Gateway Outcome</Label>
+                <div className="grid grid-cols-3 gap-2 text-xs font-mono">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPaymentSimulationMode("success");
+                      setPaymentError(null);
+                    }}
+                    className={`p-2 rounded border text-center transition-colors cursor-pointer ${
+                      paymentSimulationMode === "success"
+                        ? "border-emerald-600 bg-emerald-50 text-emerald-950 font-bold"
+                        : "border-[#D5D3C8] bg-white text-[#526071] hover:bg-[#FAF9F5]"
+                    }`}
+                  >
+                    🟢 Success (Paid)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPaymentSimulationMode("decline");
+                      setPaymentError(null);
+                    }}
+                    className={`p-2 rounded border text-center transition-colors cursor-pointer ${
+                      paymentSimulationMode === "decline"
+                        ? "border-red-600 bg-red-50 text-red-950 font-bold"
+                        : "border-[#D5D3C8] bg-white text-[#526071] hover:bg-[#FAF9F5]"
+                    }`}
+                  >
+                    🔴 Decline (Failed)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPaymentSimulationMode("cancel");
+                      setPaymentError(null);
+                    }}
+                    className={`p-2 rounded border text-center transition-colors cursor-pointer ${
+                      paymentSimulationMode === "cancel"
+                        ? "border-amber-600 bg-amber-50 text-amber-950 font-bold"
+                        : "border-[#D5D3C8] bg-white text-[#526071] hover:bg-[#FAF9F5]"
+                    }`}
+                  >
+                    ⚪ Cancel Order
+                  </button>
+                </div>
+              </div>
+
               {/* Test Card Quick Selector */}
               <div>
                 <Label>Choose Test Card Profile</Label>
@@ -378,7 +489,7 @@ function CheckoutContent() {
                       setCardBrand("visa");
                       setCardNumber("4242 •••• •••• 4242");
                     }}
-                    className={`p-2.5 rounded border text-left font-mono ${
+                    className={`p-2.5 rounded border text-left font-mono cursor-pointer ${
                       cardBrand === "visa"
                         ? "border-[#13171C] bg-[#13171C] text-white font-bold"
                         : "border-[#D5D3C8] bg-white text-[#4A5562]"
@@ -392,7 +503,7 @@ function CheckoutContent() {
                       setCardBrand("mastercard");
                       setCardNumber("5555 •••• •••• 5555");
                     }}
-                    className={`p-2.5 rounded border text-left font-mono ${
+                    className={`p-2.5 rounded border text-left font-mono cursor-pointer ${
                       cardBrand === "mastercard"
                         ? "border-[#13171C] bg-[#13171C] text-white font-bold"
                         : "border-[#D5D3C8] bg-white text-[#4A5562]"
@@ -422,22 +533,26 @@ function CheckoutContent() {
               <div className="pt-4 border-t border-[#ECEBE4]">
                 <Button
                   type="submit"
-                  variant="primary"
+                  variant={paymentSimulationMode === "decline" ? "danger" : "primary"}
                   size="lg"
                   className="w-full justify-center text-sm font-bold uppercase tracking-wider py-3"
                   disabled={isProcessing}
                 >
                   {isProcessing ? (
-                    <span>Processing Stripe Transaction...</span>
+                    <span>Processing Internal Simulated Payment...</span>
+                  ) : paymentSimulationMode === "decline" ? (
+                    <span>Trigger Card Decline Simulation →</span>
+                  ) : paymentSimulationMode === "cancel" ? (
+                    <span>Cancel Checkout Session →</span>
                   ) : (
                     <span>
-                      Pay £{(grandTotalCents / 100).toFixed(2)} & Complete Order →
+                      Authorize Simulated £{(grandTotalCents / 100).toFixed(2)} & Complete Order →
                     </span>
                   )}
                 </Button>
                 <div className="flex items-center justify-center gap-2 text-[11px] font-mono text-[#7D8A98] mt-2">
                   <IconLock className="w-3.5 h-3.5" />
-                  <span>256-bit encrypted checkout session • Webhook verified</span>
+                  <span>Internal idempotency protected • Server price &amp; VAT validated</span>
                 </div>
               </div>
             </form>

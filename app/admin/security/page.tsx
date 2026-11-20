@@ -93,9 +93,8 @@ export default function AdminSecurityPage() {
           </Button>
           <Link href="/admin/production">
             <Button
-              variant="outline"
+              variant="dark-outline"
               size="sm"
-              className="border-[#384350] bg-[#1E252D] text-white hover:bg-[#2A3440]"
             >
               &larr; Production Floor
             </Button>
@@ -351,12 +350,12 @@ export default function AdminSecurityPage() {
               </span>
             </div>
             <Button
-              variant="outline"
+              variant="dark-outline"
               size="sm"
               onClick={() => {
                 alert("Security Evidence Report copied to clipboard in GitHub Flavored Markdown format.");
               }}
-              className="border-[#384350] bg-[#1E252D] text-white hover:bg-[#2A3440] text-xs font-mono"
+              className="text-xs font-mono"
             >
               <IconDownload className="w-3.5 h-3.5 mr-1.5" /> Copy Markdown Report
             </Button>

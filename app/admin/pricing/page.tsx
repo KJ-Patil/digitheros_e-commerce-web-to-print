@@ -215,7 +215,7 @@ export default function AdminPricingPage() {
                       </td>
                       <td className="p-3 text-right">
                         <Button
-                          variant="outline"
+                          variant="dark-outline"
                           size="sm"
                           className="text-[11px] font-mono"
                           onClick={() => handleEditRuleClick(r)}
@@ -382,7 +382,7 @@ export default function AdminPricingPage() {
                 </Button>
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="dark-outline"
                   size="sm"
                   onClick={() => setSelectedRule(null)}
                 >
@@ -458,7 +458,7 @@ export default function AdminPricingPage() {
                 </Button>
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="dark-outline"
                   size="sm"
                   onClick={() => setIsAddTierModalOpen(false)}
                 >

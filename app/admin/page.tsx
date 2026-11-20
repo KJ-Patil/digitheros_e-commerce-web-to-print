@@ -174,7 +174,7 @@ export default function AdminOverviewPage() {
         </div>
 
         <Link href="/admin/security">
-          <Button variant="outline" size="sm" className="text-xs font-mono text-[#A0ACB9]">
+          <Button variant="dark-outline" size="sm" className="text-xs font-mono">
             Run Security Audit →
           </Button>
         </Link>

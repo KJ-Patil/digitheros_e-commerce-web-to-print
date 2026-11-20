@@ -58,6 +58,53 @@ export default function AdminProductionPage() {
 
   const [selectedJobForHistory, setSelectedJobForHistory] = useState<ProductionJob | null>(null);
 
+  // Delivery & Courier Tracking Modal State
+  const [selectedJobForTracking, setSelectedJobForTracking] = useState<ProductionJob | null>(null);
+  const [trackingCourier, setTrackingCourier] = useState<string>("Royal Mail Tracked 48");
+  const [trackingCode, setTrackingCode] = useState<string>("");
+  const [trackingUrlInput, setTrackingUrlInput] = useState<string>("");
+  const [trackingStatus, setTrackingStatus] = useState<"DISPATCHED" | "IN_TRANSIT" | "DELIVERED">("DISPATCHED");
+  const [trackingEstDelivery, setTrackingEstDelivery] = useState<string>("2 business days");
+  const [isSavingTracking, setIsSavingTracking] = useState<boolean>(false);
+
+  const handleSaveTracking = async () => {
+    if (!selectedJobForTracking) return;
+    setIsSavingTracking(true);
+    try {
+      const res = await fetch(`/api/admin/orders/${selectedJobForTracking.id}/tracking`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          courierName: trackingCourier,
+          trackingNumber: trackingCode || `RM48-${Date.now().toString().slice(-8)}GB`,
+          trackingUrl: trackingUrlInput,
+          dispatchStatus: trackingStatus,
+          estimatedDelivery: trackingEstDelivery,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to update tracking");
+
+      setJobs((prev) =>
+        prev.map((j) =>
+          j.id === selectedJobForTracking.id
+            ? {
+                ...j,
+                stage: trackingStatus === "DELIVERED" ? "COMPLETED" : "COMPLETED",
+              }
+            : j
+        )
+      );
+      setDownloadMsg(`✓ Tracking recorded for ${selectedJobForTracking.orderNumber}. In-app notification generated.`);
+      setTimeout(() => setDownloadMsg(null), 5000);
+      setSelectedJobForTracking(null);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Error saving tracking");
+    } finally {
+      setIsSavingTracking(false);
+    }
+  };
+
   // CSV Variable-Data Modal State
   const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
   const [isProcessingCsv, setIsProcessingCsv] = useState(false);
@@ -444,9 +491,8 @@ export default function AdminProductionPage() {
 
         <div className="flex flex-wrap items-center gap-3">
           <Button
-            variant="outline"
+            variant="dark-outline"
             size="sm"
-            className="border-[#384350] bg-[#1E252D] text-white hover:bg-[#2A3440]"
             onClick={() => {
               setActiveTab(activeTab === "ARCHIVE" ? "QUEUE" : "ARCHIVE");
             }}
@@ -730,7 +776,7 @@ export default function AdminProductionPage() {
 
                       <td className="px-4 py-3.5 text-right space-x-1.5">
                         <Button
-                          variant="outline"
+                          variant="dark-outline"
                           size="sm"
                           className={`text-xs py-1 h-7 border-[#384350] ${
                             job.isProofApproved
@@ -758,6 +804,21 @@ export default function AdminProductionPage() {
                           className="px-2 py-1 text-[11px] font-mono rounded bg-[#1C232B] border border-[#27323E] text-[#8E9CA9] hover:text-white"
                         >
                           Audit
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setSelectedJobForTracking(job);
+                            setTrackingCourier("Royal Mail Tracked 48");
+                            setTrackingCode(`RM48-${Date.now().toString().slice(-8)}GB`);
+                            setTrackingUrlInput("");
+                            setTrackingStatus("DISPATCHED");
+                            setTrackingEstDelivery("2 business days");
+                          }}
+                          className="px-2 py-1 text-[11px] font-mono rounded bg-blue-950/50 border border-blue-700/50 text-blue-300 hover:bg-blue-900/60 transition-colors"
+                          title="Record courier tracking and dispatch order"
+                        >
+                          📦 Track
                         </button>
 
                         <button
@@ -981,9 +1042,9 @@ export default function AdminProductionPage() {
                       <td className="px-4 py-3.5 text-[#8E9CA9]">{job.dueDate}</td>
                       <td className="px-4 py-3.5 text-right">
                         <Button
-                          variant="outline"
+                          variant="dark-outline"
                           size="sm"
-                          className="text-xs py-1 h-7 border-[#384350] bg-[#1E252D] text-white hover:bg-[#2A3440]"
+                          className="text-xs py-1 h-7"
                           onClick={() => handleDownload(job)}
                         >
                           <IconDownload className="w-3 h-3 mr-1" /> PDF
@@ -1026,9 +1087,8 @@ export default function AdminProductionPage() {
                 + Simulate Lifecycle Alert
               </Button>
               <Button
-                variant="outline"
+                variant="dark-outline"
                 size="sm"
-                className="border-[#384350] bg-[#1E252D] text-white hover:bg-[#2A3440]"
                 onClick={fetchEmails}
               >
                 ↻ Refresh Outbox
@@ -1134,7 +1194,7 @@ export default function AdminProductionPage() {
                       </td>
                       <td className="p-3 text-right whitespace-nowrap space-x-2">
                         <Button
-                          variant="outline"
+                          variant="dark-outline"
                           size="sm"
                           className="border-[#384350] bg-[#1C232B] text-white hover:bg-[#2A3440] text-[11px] py-1 h-7"
                           onClick={() => {
@@ -1216,9 +1276,8 @@ export default function AdminProductionPage() {
 
             <div className="flex justify-end gap-3 pt-3 border-t border-[#232B34]">
               <Button
-                variant="outline"
+                variant="dark-outline"
                 size="sm"
-                className="border-[#384350] bg-[#1E252D] text-white hover:bg-[#2A3440]"
                 onClick={() => setSelectedJobForMachine(null)}
               >
                 Cancel
@@ -1279,12 +1338,134 @@ export default function AdminProductionPage() {
 
             <div className="flex justify-end pt-3 border-t border-[#232B34]">
               <Button
-                variant="outline"
+                variant="dark-outline"
                 size="sm"
-                className="border-[#384350] bg-[#1E252D] text-white hover:bg-[#2A3440]"
                 onClick={() => setSelectedJobForHistory(null)}
               >
                 Close Audit
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Courier & Delivery Tracking Modal */}
+      {selectedJobForTracking && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+          <div className="bg-[#151A21] border border-[#27323E] rounded-lg max-w-lg w-full p-6 space-y-5 shadow-2xl text-white">
+            <div className="flex items-start justify-between border-b border-[#232B34] pb-3">
+              <div>
+                <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#E65A28]">
+                  Dispatch Logistics
+                </span>
+                <h3 className="text-lg font-bold text-white mt-0.5">
+                  Courier Tracking: {selectedJobForTracking.orderNumber}
+                </h3>
+                <span className="text-xs text-[#8E9CA9]">
+                  {selectedJobForTracking.productName} ({selectedJobForTracking.quantity} units)
+                </span>
+              </div>
+              <button
+                onClick={() => setSelectedJobForTracking(null)}
+                className="text-xs font-mono text-[#8E9CA9] hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs font-mono">
+              <div>
+                <label className="block text-[#8E9CA9] mb-1.5 uppercase">Courier Partner</label>
+                <select
+                  value={trackingCourier}
+                  onChange={(e) => setTrackingCourier(e.target.value)}
+                  className="w-full bg-[#1C232B] border border-[#27323E] rounded p-2.5 text-white focus:outline-none focus:border-[#E65A28]"
+                >
+                  <option value="Royal Mail Tracked 48">Royal Mail Tracked 48</option>
+                  <option value="Royal Mail Special Delivery (Guaranteed 1pm)">Royal Mail Special Delivery</option>
+                  <option value="DPD UK Next Day Express">DPD UK Next Day Express</option>
+                  <option value="FedEx Express UK">FedEx Express UK</option>
+                  <option value="DHL Express Domestic">DHL Express Domestic</option>
+                  <option value="Factory Collection / Courier Pickup">Factory Collection / Counter Pickup</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[#8E9CA9] mb-1.5 uppercase">Consignment / Tracking Number</label>
+                <input
+                  type="text"
+                  value={trackingCode}
+                  onChange={(e) => setTrackingCode(e.target.value)}
+                  placeholder="e.g. GB982736189 / DPD-0928192"
+                  className="w-full bg-[#1C232B] border border-[#27323E] rounded p-2.5 text-white font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[#8E9CA9] mb-1.5 uppercase">
+                  Public Tracking URL (Leave blank for auto-format)
+                </label>
+                <input
+                  type="url"
+                  value={trackingUrlInput}
+                  onChange={(e) => setTrackingUrlInput(e.target.value)}
+                  placeholder="https://track.royalmail.com/..."
+                  className="w-full bg-[#1C232B] border border-[#27323E] rounded p-2.5 text-white font-mono"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[#8E9CA9] mb-1.5 uppercase">Dispatch Status</label>
+                  <select
+                    value={trackingStatus}
+                    onChange={(e) =>
+                      setTrackingStatus(e.target.value as "DISPATCHED" | "IN_TRANSIT" | "DELIVERED")
+                    }
+                    className="w-full bg-[#1C232B] border border-[#27323E] rounded p-2.5 text-white"
+                  >
+                    <option value="DISPATCHED">DISPATCHED (Handed to courier)</option>
+                    <option value="IN_TRANSIT">IN TRANSIT (Out for delivery)</option>
+                    <option value="DELIVERED">DELIVERED (Signed for)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[#8E9CA9] mb-1.5 uppercase">Estimated Delivery</label>
+                  <input
+                    type="text"
+                    value={trackingEstDelivery}
+                    onChange={(e) => setTrackingEstDelivery(e.target.value)}
+                    placeholder="e.g. 2 business days"
+                    className="w-full bg-[#1C232B] border border-[#27323E] rounded p-2.5 text-white"
+                  />
+                </div>
+              </div>
+
+              <div className="p-3 bg-[#0E1318] border border-[#232B34] rounded text-[11px] text-[#8E9CA9] space-y-1">
+                <div className="text-white font-bold">In-App Notification Trigger:</div>
+                <div>✓ Generates in-app alert for customer {selectedJobForTracking.customerName}</div>
+                <div>✓ Customer sees tracking link &amp; status live in customer dashboard</div>
+                <div className="text-amber-400">External courier webhook API: Standby (Manual tracking active)</div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-3 border-t border-[#232B34]">
+              <Button
+                variant="dark-outline"
+                size="sm"
+                onClick={() => setSelectedJobForTracking(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                disabled={isSavingTracking}
+                onClick={handleSaveTracking}
+                className="bg-[#E65A28] hover:bg-[#CF4919] text-white font-bold font-mono"
+              >
+                {isSavingTracking ? "Saving & Notifying..." : "Save Tracking & Notify"}
               </Button>
             </div>
           </div>
@@ -1392,9 +1573,8 @@ export default function AdminProductionPage() {
                     <IconUnlock className="w-3.5 h-3.5" /> 500-page batch print stream compiled successfully.
                   </span>
                   <Button
-                    variant="outline"
+                    variant="dark-outline"
                     size="sm"
-                    className="border-[#384350] bg-[#1E252D] text-white hover:bg-[#2A3440]"
                     onClick={() => {
                       alert(`Downloading 500-page batch print file: ${csvResult.outputFileName}`);
                     }}
@@ -1508,9 +1688,8 @@ export default function AdminProductionPage() {
               </span>
               <div className="flex gap-2">
                 <Button
-                  variant="outline"
+                  variant="dark-outline"
                   size="sm"
-                  className="border-[#384350] bg-[#1E252D] text-white hover:bg-[#2A3440]"
                   onClick={() => handleResendEmail(selectedEmailForPreview.id)}
                 >
                   Resend Alert to Recipient
@@ -1589,9 +1768,8 @@ export default function AdminProductionPage() {
               <div className="flex justify-end gap-2 pt-2 border-t border-[#232B34]">
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="dark-outline"
                   size="sm"
-                  className="border-[#384350] bg-[#1E252D] text-white hover:bg-[#2A3440]"
                   onClick={() => setIsSimulateModalOpen(false)}
                 >
                   Cancel

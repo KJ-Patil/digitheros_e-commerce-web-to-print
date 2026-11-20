@@ -1,7 +1,7 @@
 import React from "react";
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "primary" | "secondary" | "outline" | "ghost" | "danger";
+  variant?: "primary" | "secondary" | "outline" | "ghost" | "danger" | "dark-outline";
   size?: "sm" | "md" | "lg";
   isLoading?: boolean;
 }
@@ -16,7 +16,7 @@ export function Button({
   ...props
 }: ButtonProps) {
   const baseStyles =
-    "inline-flex items-center justify-center font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none select-none rounded";
+    "inline-flex items-center justify-center font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none select-none rounded cursor-pointer";
 
   const sizeStyles = {
     sm: "text-xs px-2.5 py-1.5 h-8 gap-1.5",
@@ -31,15 +31,33 @@ export function Button({
       "bg-[#13171C] text-white hover:bg-[#252B33] active:bg-[#0A0D10] focus-visible:ring-[#13171C]",
     outline:
       "border border-[#D1D0C7] bg-white text-[#13171C] hover:bg-[#F2F1EA] hover:border-[#B5B4AB] focus-visible:ring-[#13171C]",
+    "dark-outline":
+      "border border-[#384350] bg-[#1E252D] text-white hover:bg-[#2A3440] hover:border-[#4E5D6E] focus-visible:ring-white shadow-xs",
     ghost:
       "text-[#333C48] hover:bg-[#ECEBE4] hover:text-[#13171C] focus-visible:ring-[#333C48]",
     danger:
       "bg-red-600 text-white hover:bg-red-700 active:bg-red-800 focus-visible:ring-red-600",
   };
 
+  let resolvedVariant = variantStyles[variant] || variantStyles.primary;
+
+  // Resolve background and text conflicts if caller provided custom classes
+  if (/\bbg-\S+/.test(className)) {
+    resolvedVariant = resolvedVariant.replace(/\bbg-\S+/g, "").trim();
+  }
+  if (/\btext-\S+/.test(className)) {
+    resolvedVariant = resolvedVariant.replace(/\btext-\S+/g, "").trim();
+  }
+  if (/\bborder-\S+/.test(className)) {
+    resolvedVariant = resolvedVariant.replace(/\bborder-\S+/g, "").trim();
+  }
+  if (/\bhover:bg-\S+/.test(className)) {
+    resolvedVariant = resolvedVariant.replace(/\bhover:bg-\S+/g, "").trim();
+  }
+
   return (
     <button
-      className={`${baseStyles} ${sizeStyles[size]} ${variantStyles[variant]} ${className}`}
+      className={`${baseStyles} ${sizeStyles[size]} ${resolvedVariant} ${className}`.replace(/\s+/g, " ").trim()}
       disabled={disabled || isLoading}
       {...props}
     >

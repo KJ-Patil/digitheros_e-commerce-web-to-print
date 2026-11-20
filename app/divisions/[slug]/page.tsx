@@ -56,9 +56,8 @@ export default async function DivisionPage({ params }: DivisionPageProps) {
               </div>
               <Link href="/#divisions">
                 <Button
-                  variant="outline"
+                  variant="dark-outline"
                   size="sm"
-                  className="border-[#384350] bg-[#1E252D] text-white hover:bg-[#2A3440]"
                 >
                   ← All 6 Divisions
                 </Button>

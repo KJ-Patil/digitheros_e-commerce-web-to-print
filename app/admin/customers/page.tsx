@@ -297,7 +297,7 @@ export default function AdminCustomersPage() {
                 </Button>
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="dark-outline"
                   size="sm"
                   onClick={() => setIsModalOpen(false)}
                 >

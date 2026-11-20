@@ -12,6 +12,16 @@ export interface ShippingAddress {
   country: string;
 }
 
+export interface DeliveryTracking {
+  courierName?: string;
+  trackingNumber?: string;
+  trackingUrl?: string;
+  dispatchStatus?: "PENDING" | "DISPATCHED" | "IN_TRANSIT" | "DELIVERED";
+  dispatchedAt?: string;
+  estimatedDelivery?: string;
+  deliveredAt?: string;
+}
+
 export interface StoredOrder {
   id: string;
   orderNumber: string;
@@ -48,11 +58,13 @@ export interface StoredOrder {
     provider: "stripe_simulated";
     sessionId: string;
     transactionId?: string;
-    paymentStatus: "paid" | "pending" | "failed";
+    paymentStatus: "paid" | "pending" | "failed" | "cancelled";
     paidAt?: string;
     cardBrand?: string;
     cardLast4?: string;
+    declineReason?: string;
   };
+  deliveryTracking?: DeliveryTracking;
   designId?: string;
   proofVersion: string;
   isProofApproved: boolean;
@@ -574,6 +586,7 @@ export function processPaymentWebhook(event: {
       amount_total?: number;
       card_brand?: string;
       card_last4?: string;
+      decline_reason?: string;
     };
   };
 }): { success: boolean; duplicate: boolean; order?: StoredOrder; message: string } {
@@ -586,18 +599,20 @@ export function processPaymentWebhook(event: {
     };
   }
 
+  const session = event.data.object;
+  const order = ORDERS_STORE.find(
+    (o) =>
+      o.paymentDetails.sessionId === session.id ||
+      (session.order_id && (o.id === session.order_id || o.orderNumber === session.order_id)) ||
+      (session.metadata?.orderId && (o.id === session.metadata.orderId || o.orderNumber === session.metadata.orderId)) ||
+      (session.metadata?.orderNumber && (o.id === session.metadata.orderNumber || o.orderNumber === session.metadata.orderNumber))
+  );
+
+  if (!order) {
+    throw new Error(`ORDER_NOT_FOUND: No order found matching session '${session.id}'.`);
+  }
+
   if (event.type === "checkout.session.completed") {
-    const session = event.data.object;
-    const order = ORDERS_STORE.find(
-      (o) =>
-        o.paymentDetails.sessionId === session.id ||
-        (session.order_id && o.id === session.order_id)
-    );
-
-    if (!order) {
-      throw new Error(`ORDER_NOT_FOUND: No order found matching session '${session.id}'.`);
-    }
-
     order.status = "PAID";
     order.stage = "PROOF"; // Transitions into Proof pipeline stage
     order.paymentDetails.paymentStatus = "paid";
@@ -617,12 +632,85 @@ export function processPaymentWebhook(event: {
     };
   }
 
+  if (event.type === "checkout.session.failed" || event.type === "payment_intent.payment_failed") {
+    order.status = "PAYMENT_PENDING";
+    order.paymentDetails.paymentStatus = "failed";
+    order.paymentDetails.declineReason = session.decline_reason || "Simulated card decline: Insufficient funds or invalid card.";
+    order.updatedAt = new Date().toISOString();
+
+    PROCESSED_WEBHOOK_EVENTS.add(event.id);
+
+    return {
+      success: false,
+      duplicate: false,
+      order,
+      message: `Payment failed for order ${order.orderNumber}: ${order.paymentDetails.declineReason}`,
+    };
+  }
+
+  if (event.type === "checkout.session.cancelled") {
+    order.status = "PAYMENT_PENDING";
+    order.paymentDetails.paymentStatus = "cancelled";
+    order.paymentDetails.declineReason = "Checkout session cancelled by customer.";
+    order.updatedAt = new Date().toISOString();
+
+    PROCESSED_WEBHOOK_EVENTS.add(event.id);
+
+    return {
+      success: false,
+      duplicate: false,
+      order,
+      message: `Checkout session cancelled for order ${order.orderNumber}.`,
+    };
+  }
+
   PROCESSED_WEBHOOK_EVENTS.add(event.id);
   return {
     success: true,
     duplicate: false,
     message: `Unhandled event type '${event.type}' acknowledged.`,
   };
+}
+
+/**
+ * Update delivery tracking information for an order
+ */
+export function updateOrderTracking(
+  orderId: string,
+  tracking: DeliveryTracking
+): StoredOrder {
+  const order = ORDERS_STORE.find((o) => o.id === orderId || o.orderNumber === orderId);
+  if (!order) {
+    throw new Error(`ORDER_NOT_FOUND: Order '${orderId}' not found.`);
+  }
+
+  const dispatchStatus = tracking.dispatchStatus || "DISPATCHED";
+  const courier = tracking.courierName || "Royal Mail Tracked 48";
+  const trackingNumber = tracking.trackingNumber || `RM48-${Date.now().toString().slice(-8)}GB`;
+
+  order.deliveryTracking = {
+    courierName: courier,
+    trackingNumber,
+    trackingUrl:
+      tracking.trackingUrl ||
+      (courier.toLowerCase().includes("dpd")
+        ? `https://track.dpd.co.uk/search?reference=${trackingNumber}`
+        : `https://www.royalmail.com/track-your-item#/tracking-results/${trackingNumber}`),
+    dispatchStatus,
+    dispatchedAt: order.deliveryTracking?.dispatchedAt || new Date().toISOString(),
+    estimatedDelivery: tracking.estimatedDelivery || "2 business days",
+    deliveredAt: dispatchStatus === "DELIVERED" ? new Date().toISOString() : undefined,
+  };
+
+  if (dispatchStatus === "DISPATCHED" || dispatchStatus === "IN_TRANSIT") {
+    order.status = "SHIPPED";
+  } else if (dispatchStatus === "DELIVERED") {
+    order.status = "COMPLETED";
+    order.stage = "COMPLETED";
+  }
+
+  order.updatedAt = new Date().toISOString();
+  return order;
 }
 
 /**
