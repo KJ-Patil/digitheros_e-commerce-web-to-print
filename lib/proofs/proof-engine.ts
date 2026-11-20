@@ -31,8 +31,8 @@ export interface OrderProofState {
 }
 
 export const INITIAL_PROOF_STORE: Record<string, OrderProofState> = {
-  "o1000000-0000-0000-0000-000000000001": {
-    orderId: "o1000000-0000-0000-0000-000000000001",
+  "c1000000-0000-0000-0000-000000000001": {
+    orderId: "c1000000-0000-0000-0000-000000000001",
     orderNumber: "ORD-2026-0891",
     customerId: "00000000-0000-0000-0000-000000000001",
     customerName: "Alex Miller (Peak Coffee)",
@@ -43,7 +43,7 @@ export const INITIAL_PROOF_STORE: Record<string, OrderProofState> = {
     revisions: [
       {
         id: "pr-0891-1",
-        orderId: "o1000000-0000-0000-0000-000000000001",
+        orderId: "c1000000-0000-0000-0000-000000000001",
         orderNumber: "ORD-2026-0891",
         versionNumber: 1,
         status: "CHANGES_REQUESTED",
@@ -53,7 +53,7 @@ export const INITIAL_PROOF_STORE: Record<string, OrderProofState> = {
       },
       {
         id: "pr-0891-2",
-        orderId: "o1000000-0000-0000-0000-000000000001",
+        orderId: "c1000000-0000-0000-0000-000000000001",
         orderNumber: "ORD-2026-0891",
         versionNumber: 2,
         status: "APPROVED",
@@ -72,8 +72,8 @@ export const INITIAL_PROOF_STORE: Record<string, OrderProofState> = {
       },
     ],
   },
-  "o1000000-0000-0000-0000-000000000002": {
-    orderId: "o1000000-0000-0000-0000-000000000002",
+  "c1000000-0000-0000-0000-000000000002": {
+    orderId: "c1000000-0000-0000-0000-000000000002",
     orderNumber: "ORD-2026-0892",
     customerId: "00000000-0000-0000-0000-000000000001",
     customerName: "Alex Miller (Peak Coffee)",
@@ -84,7 +84,7 @@ export const INITIAL_PROOF_STORE: Record<string, OrderProofState> = {
     revisions: [
       {
         id: "pr-0892-1",
-        orderId: "o1000000-0000-0000-0000-000000000002",
+        orderId: "c1000000-0000-0000-0000-000000000002",
         orderNumber: "ORD-2026-0892",
         versionNumber: 1,
         status: "PENDING",
@@ -94,8 +94,8 @@ export const INITIAL_PROOF_STORE: Record<string, OrderProofState> = {
       },
     ],
   },
-  "o1000000-0000-0000-0000-000000000003": {
-    orderId: "o1000000-0000-0000-0000-000000000003",
+  "c1000000-0000-0000-0000-000000000003": {
+    orderId: "c1000000-0000-0000-0000-000000000003",
     orderNumber: "ORD-2026-0893",
     customerId: "00000000-0000-0000-0000-000000000002",
     customerName: "Sarah Jenkins (Highland MTB)",
@@ -106,7 +106,7 @@ export const INITIAL_PROOF_STORE: Record<string, OrderProofState> = {
     revisions: [
       {
         id: "pr-0893-1",
-        orderId: "o1000000-0000-0000-0000-000000000003",
+        orderId: "c1000000-0000-0000-0000-000000000003",
         orderNumber: "ORD-2026-0893",
         versionNumber: 1,
         status: "PENDING",

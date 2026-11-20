@@ -37,20 +37,25 @@ export function PublicNav() {
           </nav>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <Link href="/login">
             <Button variant="outline" size="sm">
-              Auth / Roles
+              Sign In
             </Button>
           </Link>
-          <Link href="/customer/dashboard">
+          <Link href="/register">
+            <Button variant="primary" size="sm">
+              Register
+            </Button>
+          </Link>
+          <Link href="/customer/dashboard" className="hidden sm:inline-block">
             <Button variant="outline" size="sm">
               Customer Portal
             </Button>
           </Link>
-          <Link href="/admin/production">
+          <Link href="/admin/production" className="hidden sm:inline-block">
             <Button variant="secondary" size="sm">
-              Admin Pipeline
+              Staff Floor
             </Button>
           </Link>
         </div>

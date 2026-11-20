@@ -101,7 +101,7 @@ async function runSecurityAuditSuite() {
   let proofApproveBlocked = false;
   try {
     approveProofRevision(
-      "o1000000-0000-0000-0000-000000000003",
+      "c1000000-0000-0000-0000-000000000003",
       1,
       { id: CUST_A, email: "alex@demo.co", fullName: "Alex Miller", role: "customer" },
       "Malicious approval attempt"
@@ -115,7 +115,7 @@ async function runSecurityAuditSuite() {
   let proofChangeBlocked = false;
   try {
     requestProofChanges(
-      "o1000000-0000-0000-0000-000000000003",
+      "c1000000-0000-0000-0000-000000000003",
       1,
       { id: CUST_A, email: "alex@demo.co", fullName: "Alex Miller", role: "customer" },
       "Malicious change instructions"
@@ -128,7 +128,7 @@ async function runSecurityAuditSuite() {
   // 1e: Cross-customer 1-click reorder from order
   let reorderOrderBlocked = false;
   try {
-    reorderFromExistingOrder("o1000000-0000-0000-0000-000000000003", {
+    reorderFromExistingOrder("c1000000-0000-0000-0000-000000000003", {
       id: CUST_A,
       email: "alex@demo.co",
       fullName: "Alex Miller",

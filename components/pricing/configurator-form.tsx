@@ -345,12 +345,44 @@ export function ConfiguratorForm({ product, divisionName }: ConfiguratorFormProp
                   className="flex-1"
                 >
                   <Button variant="primary" size="lg" className="w-full">
-                    Proceed to Designer & Proof →
+                    Proceed to Designer &amp; Proof →
                   </Button>
                 </Link>
 
                 <Link
-                  href={`/checkout?product=${product.slug}&width=${widthMm}&height=${heightMm}&qty=${quantity}&material=${selectedMaterial || ""}&finish=${selectedFinish || ""}&cutType=${selectedCutType || ""}`}
+                  href="/cart"
+                  onClick={() => {
+                    try {
+                      const existing = localStorage.getItem("dh_cart_items");
+                      const items = existing ? JSON.parse(existing) : [];
+                      items.push({
+                        id: `cart_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+                        productSlug: product.slug,
+                        productName: product.name,
+                        widthMm,
+                        heightMm,
+                        quantity,
+                        materialCode: selectedMaterialCode,
+                        materialName: materials.find((m) => m.code === selectedMaterialCode)?.name,
+                        finishCode: selectedFinishCode,
+                        finishName: finishes.find((f) => f.code === selectedFinishCode)?.name,
+                        cutTypeCode: selectedCutCode,
+                        cutTypeName: cutTypes.find((c) => c.code === selectedCutCode)?.name,
+                      });
+                      localStorage.setItem("dh_cart_items", JSON.stringify(items));
+                    } catch (e) {
+                      console.warn("Cart storage warning:", e);
+                    }
+                  }}
+                  className="flex-1"
+                >
+                  <Button variant="outline" size="lg" className="w-full border-[#13171C] text-[#13171C] hover:bg-[#FAF9F5]">
+                    Add to Cart 🛒
+                  </Button>
+                </Link>
+
+                <Link
+                  href={`/checkout?product=${product.slug}&width=${widthMm}&height=${heightMm}&qty=${quantity}&material=${selectedMaterialCode || ""}&finish=${selectedFinishCode || ""}&cutType=${selectedCutCode || ""}`}
                   className="flex-1"
                 >
                   <Button variant="outline" size="lg" className="w-full border-[#13171C] text-[#13171C] hover:bg-[#13171C] hover:text-white">

@@ -164,6 +164,27 @@ export default function AdminProductionPage() {
     }
   };
 
+  const handleRefund = async (job: ProductionJob) => {
+    const confirmRefund = window.confirm(`Are you sure you want to cancel and refund order ${job.orderNumber}?`);
+    if (!confirmRefund) return;
+    try {
+      const res = await fetch(`/api/admin/orders/${job.id}/refund`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: "Staff initiated cancellation from production dashboard" }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Refund failed");
+      setDownloadMsg(`✓ Order ${job.orderNumber} marked as REFUNDED and cancelled.`);
+      setTimeout(() => setDownloadMsg(null), 4000);
+      setJobs((prev) =>
+        prev.map((j) => (j.id === job.id ? { ...j, stage: "QUOTE" as PipelineStage } : j))
+      );
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Refund failed");
+    }
+  };
+
   // Machine Allocation Handler
   const handleSaveMachineAllocation = async () => {
     if (!selectedJobForMachine) return;
@@ -737,6 +758,14 @@ export default function AdminProductionPage() {
                           className="px-2 py-1 text-[11px] font-mono rounded bg-[#1C232B] border border-[#27323E] text-[#8E9CA9] hover:text-white"
                         >
                           Audit
+                        </button>
+
+                        <button
+                          onClick={() => handleRefund(job)}
+                          className="px-2 py-1 text-[11px] font-mono rounded bg-rose-950/40 border border-rose-800/40 text-rose-300 hover:bg-rose-900/60 transition-colors"
+                          title="Issue refund and cancel job"
+                        >
+                          Refund
                         </button>
 
                         <Button

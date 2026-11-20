@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { CanvasElement, DesignCanvasState } from "@/lib/designer/types";
 import { validateCanvasElements } from "@/lib/designer/preflight";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,8 @@ interface CanvasDesignerProps {
   heightMm: number;
   bleedMm: number;
   safeMarginMm: number;
+  initialElements?: CanvasElement[];
+  initialCanvasState?: DesignCanvasState;
   onSaveProof?: (state: DesignCanvasState) => void;
 }
 
@@ -26,6 +28,8 @@ export function CanvasDesigner({
   heightMm,
   bleedMm,
   safeMarginMm,
+  initialElements,
+  initialCanvasState,
   onSaveProof,
 }: CanvasDesignerProps) {
   // Mode: "edit" (with guides & bounding boxes) vs "proof" (trimmed realistic preview)
@@ -125,6 +129,20 @@ export function CanvasDesigner({
   });
 
   const [selectedId, setSelectedId] = useState<string | null>(elements[0]?.id || null);
+
+  useEffect(() => {
+    if (initialCanvasState?.elements && initialCanvasState.elements.length > 0) {
+      setElements(initialCanvasState.elements);
+      setSelectedId(initialCanvasState.elements[0]?.id || null);
+      if (initialCanvasState.backgroundColor) {
+        setBackgroundColor(initialCanvasState.backgroundColor);
+      }
+    } else if (initialElements && initialElements.length > 0) {
+      setElements(initialElements);
+      setSelectedId(initialElements[0]?.id || null);
+    }
+  }, [initialCanvasState, initialElements]);
+
   const selectedElement = elements.find((el) => el.id === selectedId) || null;
 
   // Real-time preflight validation

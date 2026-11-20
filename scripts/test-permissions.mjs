@@ -23,21 +23,21 @@ const USERS = {
 
 const ORDERS = [
   {
-    id: "o1000000-0000-0000-0000-000000000001",
+    id: "c1000000-0000-0000-0000-000000000001",
     order_number: "ORD-2026-0891",
     customer_id: USERS.customerA.id,
     stage: "PRODUCTION",
     is_proof_approved: true,
   },
   {
-    id: "o1000000-0000-0000-0000-000000000002",
+    id: "c1000000-0000-0000-0000-000000000002",
     order_number: "ORD-2026-0892",
     customer_id: USERS.customerA.id,
     stage: "PROOF",
     is_proof_approved: false,
   },
   {
-    id: "o1000000-0000-0000-0000-000000000003",
+    id: "c1000000-0000-0000-0000-000000000003",
     order_number: "ORD-2026-0893",
     customer_id: USERS.customerB.id,
     stage: "ARTWORK",
@@ -47,14 +47,14 @@ const ORDERS = [
 
 const PRODUCTION_FILES = [
   {
-    id: "pf000000-0000-0000-0000-000000000001",
-    order_id: "o1000000-0000-0000-0000-000000000001",
+    id: "fa000000-0000-0000-0000-000000000001",
+    order_id: "c1000000-0000-0000-0000-000000000001",
     file_name: "ORD-2026-0891_Labels_20260323_Output.pdf",
     is_unlocked: true,
   },
   {
-    id: "pf000000-0000-0000-0000-000000000002",
-    order_id: "o1000000-0000-0000-0000-000000000002",
+    id: "fa000000-0000-0000-0000-000000000002",
+    order_id: "c1000000-0000-0000-0000-000000000002",
     file_name: "ORD-2026-0892_RaceBibs_20260324_Output.pdf",
     is_unlocked: false,
   },
@@ -147,7 +147,7 @@ const customerACanSeeB = customerAOrders.some((o) => o.customer_id === USERS.cus
 assert("CROSS-USER DENIAL: Customer A cannot see Customer B's orders", !customerACanSeeB);
 
 // TEST 4: Cross-user access denial — Customer A CANNOT approve Customer B's proof
-const illegalApproval = simulateApproveProof(USERS.customerA, "o1000000-0000-0000-0000-000000000003");
+const illegalApproval = simulateApproveProof(USERS.customerA, "c1000000-0000-0000-0000-000000000003");
 assert(
   "CROSS-USER DENIAL: Customer A blocked from approving Customer B's proof",
   illegalApproval.status === 403
@@ -180,7 +180,7 @@ assert("ADMIN PRIVILEGE: Admin can query production_files table", adminFileAcces
 // TEST 8: Approval Gate Enforcement — Locked file cannot be downloaded even by staff
 const lockedDownload = simulateDownloadProductionFile(
   USERS.admin,
-  "pf000000-0000-0000-0000-000000000002"
+  "fa000000-0000-0000-0000-000000000002"
 );
 assert(
   "APPROVAL GATE: Locked file cannot be released until proof is customer-approved",
@@ -190,7 +190,7 @@ assert(
 // TEST 9: Approval Gate Release — Approved file is downloadable
 const unlockedDownload = simulateDownloadProductionFile(
   USERS.admin,
-  "pf000000-0000-0000-0000-000000000001"
+  "fa000000-0000-0000-0000-000000000001"
 );
 assert(
   "APPROVAL GATE: Unlocked file is downloadable once approved",

@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, Suspense } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth/auth-context";
 import { CATALOG_DIVISIONS } from "@/lib/catalog/products";
 import { CanvasDesigner } from "@/components/designer/canvas-designer";
 import { ArtworkUploader } from "@/components/designer/artwork-uploader";
@@ -10,13 +11,37 @@ import { PublicNav } from "@/components/navigation/public-nav";
 import { PublicFooter } from "@/components/navigation/public-footer";
 import { DemoNotice } from "@/components/ui/demo-notice";
 import { Button } from "@/components/ui/button";
+import type { DesignCanvasState } from "@/lib/designer/types";
 
 function DesignerContent() {
   const router = useRouter();
+  const { user } = useAuth();
   const searchParams = useSearchParams();
+  const designId = searchParams.get("designId");
   const productSlug = searchParams.get("product") || "vinyl-stickers";
   const widthParam = parseInt(searchParams.get("w") || "75");
   const heightParam = parseInt(searchParams.get("h") || "50");
+
+  const [loadedCanvasState, setLoadedCanvasState] = useState<DesignCanvasState | null>(null);
+  const [isLoadingDesign, setIsLoadingDesign] = useState<boolean>(!!designId);
+
+  useEffect(() => {
+    if (designId) {
+      setIsLoadingDesign(true);
+      fetch(`/api/designs/${designId}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && data.design) {
+            const state = data.design.canvas_state_json;
+            if (state) {
+              setLoadedCanvasState(state);
+            }
+          }
+        })
+        .catch((err) => console.warn("Failed loading design:", err))
+        .finally(() => setIsLoadingDesign(false));
+    }
+  }, [designId]);
 
   // Find product
   let product = CATALOG_DIVISIONS[0].products[0];
@@ -98,7 +123,11 @@ function DesignerContent() {
         </div>
 
         {/* Tab View: Canvas vs Upload */}
-        {activeTab === "canvas" ? (
+        {isLoadingDesign ? (
+          <div className="p-12 text-center text-xs font-mono text-[#6A7886] bg-white rounded border border-[#D5D3CB]">
+            Loading saved vector artwork into designer...
+          </div>
+        ) : activeTab === "canvas" ? (
           <CanvasDesigner
             productSlug={product.slug}
             productName={product.name}
@@ -106,9 +135,25 @@ function DesignerContent() {
             heightMm={heightMm}
             bleedMm={product.bleedMm}
             safeMarginMm={product.safeMarginMm}
-            onSaveProof={() => {
+            initialCanvasState={loadedCanvasState || undefined}
+            onSaveProof={async (state) => {
+              try {
+                await fetch("/api/designs/save", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    designId: designId || undefined,
+                    customerId: user?.id || "00000000-0000-0000-0000-000000000001",
+                    productId: product.id || "b1000000-0000-0000-0000-000000000001",
+                    name: `${product.name} Custom Vector Design`,
+                    canvasStateJson: state,
+                  }),
+                });
+              } catch (err) {
+                console.warn("Cloud save non-blocking:", err);
+              }
               alert(
-                `Digital Proof v1 Created!\nProduct: ${product.name}\nDimensions: ${widthMm}x${heightMm}mm\nRedirecting to Customer Proof Review...`
+                `Digital Proof v1 Created & Saved to Cloud!\nProduct: ${product.name}\nDimensions: ${widthMm}x${heightMm}mm\nRedirecting to Customer Proof Review...`
               );
               router.push("/customer/dashboard#proofs");
             }}

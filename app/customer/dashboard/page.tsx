@@ -33,16 +33,121 @@ interface InAppNotificationItem {
 }
 
 export default function CustomerDashboardPage() {
-  const { user } = useAuth();
+  const { user, updateProfile, updatePassword } = useAuth();
   const currentCustomerId = user?.id || "00000000-0000-0000-0000-000000000001";
 
   const [orders, setOrders] = useState<StoredOrder[]>(() => getOrders(currentCustomerId));
-  const [savedDesigns] = useState<SavedDesignTemplate[]>(() => getSavedDesigns(currentCustomerId));
+  const [savedDesignsList, setSavedDesignsList] = useState<SavedDesignTemplate[]>(() => getSavedDesigns(currentCustomerId));
   const [proofs, setProofs] = useState<OrderProofState[]>(Object.values(INITIAL_PROOF_STORE));
+
+  const [orderSearchTerm, setOrderSearchTerm] = useState("");
+  const [orderStageFilter, setOrderStageFilter] = useState("ALL");
+  const [selectedOrderDetails, setSelectedOrderDetails] = useState<StoredOrder | null>(null);
 
   const [reorderStatus, setReorderStatus] = useState<string | null>(null);
   const [isReordering, setIsReordering] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<OrderInvoice | null>(null);
+
+  // Sync cloud saved designs
+  useEffect(() => {
+    fetch(`/api/designs?customerId=${currentCustomerId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.designs) && data.designs.length > 0) {
+          setSavedDesignsList(data.designs);
+        }
+      })
+      .catch(() => {});
+  }, [currentCustomerId]);
+
+  const handleDeleteDesign = async (designId: string) => {
+    if (!confirm("Are you sure you want to delete this saved design?")) return;
+    try {
+      const res = await fetch(`/api/designs/${designId}`, { method: "DELETE" });
+      if (res.ok) {
+        setSavedDesignsList((prev) => prev.filter((d) => d.id !== designId));
+        setReorderStatus("✓ Saved design template removed successfully.");
+        setTimeout(() => setReorderStatus(null), 4000);
+      }
+    } catch {
+      alert("Failed to delete design");
+    }
+  };
+
+  // Filtered orders
+  const filteredOrders = orders.filter((o) => {
+    const matchesSearch =
+      !orderSearchTerm ||
+      o.orderNumber.toLowerCase().includes(orderSearchTerm.toLowerCase()) ||
+      o.productName.toLowerCase().includes(orderSearchTerm.toLowerCase()) ||
+      o.specsSummary.toLowerCase().includes(orderSearchTerm.toLowerCase());
+
+    const matchesStage = orderStageFilter === "ALL" || o.stage === orderStageFilter;
+
+    return matchesSearch && matchesStage;
+  });
+
+  // Profile management state
+  const [profileName, setProfileName] = useState(user?.full_name || "");
+  const [profileCompany, setProfileCompany] = useState(user?.company_name || "");
+  const [profilePhone, setProfilePhone] = useState(user?.phone || "");
+  const [profileMsg, setProfileMsg] = useState<string | null>(null);
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [passMsg, setPassMsg] = useState<string | null>(null);
+  const [isUpdatingPass, setIsUpdatingPass] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setProfileName(user.full_name || "");
+      setProfileCompany(user.company_name || "");
+      setProfilePhone(user.phone || "");
+    }
+  }, [user]);
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsUpdatingProfile(true);
+    setProfileMsg(null);
+    const res = await updateProfile({
+      fullName: profileName,
+      companyName: profileCompany,
+      phone: profilePhone,
+    });
+    setIsUpdatingProfile(false);
+    if (res.success) {
+      setProfileMsg("✓ Customer profile details updated successfully!");
+      setTimeout(() => setProfileMsg(null), 4000);
+    } else {
+      setProfileMsg("⚠️ " + (res.error || "Profile update failed."));
+    }
+  };
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword.length < 6) {
+      setPassMsg("⚠️ Password must be at least 6 characters.");
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      setPassMsg("⚠️ Passwords do not match.");
+      return;
+    }
+    setIsUpdatingPass(true);
+    setPassMsg(null);
+    const res = await updatePassword(newPassword);
+    setIsUpdatingPass(false);
+    if (res.success) {
+      setPassMsg("✓ Account password updated successfully!");
+      setNewPassword("");
+      setConfirmNewPassword("");
+      setTimeout(() => setPassMsg(null), 4000);
+    } else {
+      setPassMsg("⚠️ " + (res.error || "Password update failed."));
+    }
+  };
 
   // Module 10: Lifecycle Alerts & In-App Notifications State
   const [notifications, setNotifications] = useState<InAppNotificationItem[]>([]);
@@ -419,7 +524,7 @@ export default function CustomerDashboardPage() {
 
         <Card badge="SAVED">
           <div className="text-xs font-mono text-[#636F7B] uppercase">Saved Templates</div>
-          <div className="text-2xl font-extrabold text-[#13171C] mt-1">{savedDesigns.length} Ready</div>
+          <div className="text-2xl font-extrabold text-[#13171C] mt-1">{savedDesignsList.length} Ready</div>
           <div className="text-[11px] text-[#7E8B99] mt-1">Instant 1-click repeat orders</div>
         </Card>
 
@@ -467,48 +572,78 @@ export default function CustomerDashboardPage() {
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 bg-[#13171C]"></span>
             <h2 className="text-base font-bold text-[#13171C] tracking-tight">
-              Saved Designs & 1-Click Repeat
+              Saved Designs &amp; 1-Click Repeat
             </h2>
           </div>
-          <span className="text-xs font-mono text-[#768391]">Re-order without re-uploading</span>
+          <span className="text-xs font-mono text-[#768391]">Re-order or customize in Web-to-Print studio</span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {savedDesigns.map((design) => (
-            <Card key={design.id}>
-              <div className="h-28 bg-[#EAE8E0] rounded border border-[#D5D3C8] mb-3 flex flex-col items-center justify-center text-xs font-mono text-[#576472]">
-                <span className="font-bold text-sm text-[#13171C]">{design.name}</span>
-                <span className="text-[10px] text-[#7C8894]">
-                  {design.divisionName} • {design.widthMm}x{design.heightMm}mm
-                </span>
-              </div>
-              <h4 className="text-sm font-bold text-[#13171C]">{design.name}</h4>
-              <p className="text-xs text-[#636F7B] mt-0.5">
-                Default Run: {design.defaultQuantity.toLocaleString()} units • Last: {design.lastOrderedDate}
-              </p>
-              <div className="mt-4 pt-3 border-t border-[#ECEBE4] flex items-center justify-between">
-                <span className="text-xs font-mono text-[#7D8A98]">Approved {design.approvedVersion}</span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={isReordering}
-                  onClick={() => handleReorder(design.id, true)}
-                >
-                  {isReordering ? "Processing..." : "1-Click Reorder"}
-                </Button>
-              </div>
-            </Card>
-          ))}
-        </div>
+        {savedDesignsList.length === 0 ? (
+          <div className="p-6 bg-white border border-[#DCDAD0] rounded text-center text-xs font-mono text-[#7E8B99]">
+            No saved vector designs yet. Create one in the{" "}
+            <Link href="/designer" className="underline text-[#E65A28] font-bold">
+              Designer Studio
+            </Link>
+            .
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {savedDesignsList.map((design) => (
+              <Card key={design.id} className="flex flex-col justify-between">
+                <div>
+                  <div className="h-28 bg-[#EAE8E0] rounded border border-[#D5D3C8] mb-3 flex flex-col items-center justify-center text-xs font-mono text-[#576472]">
+                    <span className="font-bold text-sm text-[#13171C] text-center px-2">{design.name}</span>
+                    <span className="text-[10px] text-[#7C8894] mt-1">
+                      {design.divisionName} • {design.widthMm}x{design.heightMm}mm
+                    </span>
+                  </div>
+                  <h4 className="text-sm font-bold text-[#13171C]">{design.name}</h4>
+                  <p className="text-xs text-[#636F7B] mt-0.5">
+                    Default Run: {design.defaultQuantity.toLocaleString()} units • Last: {design.lastOrderedDate}
+                  </p>
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-[#ECEBE4] space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-mono text-[#7D8A98]">Approved {design.approvedVersion}</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={isReordering}
+                      onClick={() => handleReorder(design.id, true)}
+                    >
+                      {isReordering ? "Processing..." : "1-Click Reorder"}
+                    </Button>
+                  </div>
+                  <div className="flex items-center justify-between pt-1">
+                    <Link
+                      href={`/designer?designId=${design.id}&product=${design.productSlug}&w=${design.widthMm}&h=${design.heightMm}`}
+                    >
+                      <span className="text-xs font-mono font-medium text-[#E65A28] hover:underline cursor-pointer">
+                        ✏️ Edit in Canvas
+                      </span>
+                    </Link>
+                    <button
+                      onClick={() => handleDeleteDesign(design.id)}
+                      className="text-[11px] font-mono text-red-600 hover:text-red-800 hover:underline cursor-pointer"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Module: Order History & Xero Invoices */}
       <section id="orders" className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 bg-[#E65A28]"></span>
             <h2 className="text-base font-bold text-[#13171C] tracking-tight">
-              Order History & Invoice Archive
+              Order History &amp; Invoice Archive
             </h2>
           </div>
           <span className="text-xs font-mono text-[#768391]">
@@ -516,48 +651,243 @@ export default function CustomerDashboardPage() {
           </span>
         </div>
 
-        <Table headers={["Order #", "Date", "Items / Division", "Qty", "Total (inc. VAT)", "Pipeline Stage", "Actions"]}>
-          {orders.map((order) => (
-            <TableRow key={order.id}>
-              <TableCell className="font-mono font-bold text-[#13171C]">
-                {order.orderNumber}
-              </TableCell>
-              <TableCell className="font-mono text-xs">
-                {order.createdAt.split("T")[0]}
-              </TableCell>
-              <TableCell>
-                <div className="font-medium text-[#13171C]">{order.productName}</div>
-                <div className="text-[11px] text-[#697785]">{order.specsSummary}</div>
-              </TableCell>
-              <TableCell className="font-mono">{order.quantity.toLocaleString()}</TableCell>
-              <TableCell className="font-mono font-bold text-[#13171C]">
-                £{(order.pricing.totalCents / 100).toFixed(2)}
-              </TableCell>
-              <TableCell>
-                <Badge variant={order.stage} size="sm">
-                  {order.stage}
-                </Badge>
-              </TableCell>
-              <TableCell className="space-x-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleViewInvoice(order.id)}
-                >
-                  <IconDownload className="w-3.5 h-3.5 mr-1" /> Invoice
+        {/* Order Search & Filtering Toolbar */}
+        <div className="bg-white p-3 rounded border border-[#DCDAD0] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-mono">
+          <div className="w-full sm:w-72">
+            <input
+              type="text"
+              placeholder="Search by order #, product, specs..."
+              value={orderSearchTerm}
+              onChange={(e) => setOrderSearchTerm(e.target.value)}
+              className="w-full p-2 border border-[#CBD5E1] rounded text-[#13171C] focus:outline-none focus:border-[#E65A28]"
+            />
+          </div>
+
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+            <span className="text-[#64748B] text-[11px] uppercase">Stage:</span>
+            <select
+              value={orderStageFilter}
+              onChange={(e) => setOrderStageFilter(e.target.value)}
+              className="p-1.5 border border-[#CBD5E1] rounded bg-white text-[#13171C]"
+            >
+              <option value="ALL">All Stages ({orders.length})</option>
+              <option value="QUOTE">Quote</option>
+              <option value="ORDER">Order Placed</option>
+              <option value="ARTWORK">Artwork Preflight</option>
+              <option value="PROOF">Proof Review</option>
+              <option value="PRODUCTION">In Production</option>
+              <option value="COMPLETED">Completed</option>
+            </select>
+            {(orderSearchTerm || orderStageFilter !== "ALL") && (
+              <button
+                onClick={() => {
+                  setOrderSearchTerm("");
+                  setOrderStageFilter("ALL");
+                }}
+                className="text-xs text-[#E65A28] underline ml-1"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        </div>
+
+        {filteredOrders.length === 0 ? (
+          <div className="p-8 bg-white border border-[#DCDAD0] rounded text-center text-xs font-mono text-[#7E8B99]">
+            No orders match your search filters.
+          </div>
+        ) : (
+          <Table headers={["Order #", "Date", "Items / Division", "Qty", "Total (inc. VAT)", "Pipeline Stage", "Actions"]}>
+            {filteredOrders.map((order) => (
+              <TableRow key={order.id}>
+                <TableCell className="font-mono font-bold text-[#13171C]">
+                  {order.orderNumber}
+                </TableCell>
+                <TableCell className="font-mono text-xs">
+                  {order.createdAt.split("T")[0]}
+                </TableCell>
+                <TableCell>
+                  <div className="font-medium text-[#13171C]">{order.productName}</div>
+                  <div className="text-[11px] text-[#697785]">{order.specsSummary}</div>
+                </TableCell>
+                <TableCell className="font-mono">{order.quantity.toLocaleString()}</TableCell>
+                <TableCell className="font-mono font-bold text-[#13171C]">
+                  £{(order.pricing.totalCents / 100).toFixed(2)}
+                </TableCell>
+                <TableCell>
+                  <Badge variant={order.stage} size="sm">
+                    {order.stage}
+                  </Badge>
+                </TableCell>
+                <TableCell className="space-x-1.5 whitespace-nowrap">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedOrderDetails(order)}
+                  >
+                    Details
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleViewInvoice(order.id)}
+                  >
+                    <IconDownload className="w-3.5 h-3.5 mr-1" /> Invoice
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={isReordering}
+                    onClick={() => handleReorder(order.id, false)}
+                  >
+                    Reorder
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </Table>
+        )}
+      </section>
+
+      {/* Account & Profile Settings Section */}
+      <section id="profile" className="space-y-4 pt-4 border-t border-[#DCDAD0]">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 bg-[#E65A28]"></span>
+            <h2 className="text-base font-bold text-[#13171C] tracking-tight">
+              Customer Account &amp; Profile Settings
+            </h2>
+          </div>
+          <span className="text-xs font-mono text-[#768391]">
+            Protected by Supabase Row-Level Security
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Contact Details */}
+          <Card className="space-y-4">
+            <div>
+              <h3 className="text-sm font-bold text-[#13171C]">Contact &amp; Trade Details</h3>
+              <p className="text-xs text-[#5D6B7A] mt-0.5">
+                Update the official name, company trade name, and dispatch phone for your orders.
+              </p>
+            </div>
+
+            {profileMsg && (
+              <div className="p-3 bg-emerald-50 border border-emerald-300 rounded text-emerald-900 text-xs font-mono">
+                {profileMsg}
+              </div>
+            )}
+
+            <form onSubmit={handleSaveProfile} className="space-y-3 text-xs">
+              <div>
+                <label className="block text-[#4B5663] font-mono text-[10px] uppercase font-bold mb-1">
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={profileName}
+                  onChange={(e) => setProfileName(e.target.value)}
+                  className="w-full bg-white border border-[#CFCECB] rounded p-2 text-sm text-[#13171C] focus:border-[#E65A28] focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[#4B5663] font-mono text-[10px] uppercase font-bold mb-1">
+                  Company / Organization
+                </label>
+                <input
+                  type="text"
+                  value={profileCompany}
+                  onChange={(e) => setProfileCompany(e.target.value)}
+                  placeholder="e.g. Peak Coffee Roasters"
+                  className="w-full bg-white border border-[#CFCECB] rounded p-2 text-sm text-[#13171C] focus:border-[#E65A28] focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[#4B5663] font-mono text-[10px] uppercase font-bold mb-1">
+                  Phone Number
+                </label>
+                <input
+                  type="tel"
+                  value={profilePhone}
+                  onChange={(e) => setProfilePhone(e.target.value)}
+                  placeholder="+44 7700 900123"
+                  className="w-full bg-white border border-[#CFCECB] rounded p-2 text-sm text-[#13171C] focus:border-[#E65A28] focus:outline-none"
+                />
+              </div>
+
+              <div className="pt-2">
+                <Button variant="primary" type="submit" size="sm" disabled={isUpdatingProfile}>
+                  {isUpdatingProfile ? "Saving Details..." : "Save Profile Details"}
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={isReordering}
-                  onClick={() => handleReorder(order.id, false)}
-                >
-                  Reorder
+              </div>
+            </form>
+          </Card>
+
+          {/* Security & Password */}
+          <Card className="space-y-4">
+            <div>
+              <h3 className="text-sm font-bold text-[#13171C]">Account Security &amp; Password</h3>
+              <p className="text-xs text-[#5D6B7A] mt-0.5">
+                Update your authentication password or review registered account credentials.
+              </p>
+            </div>
+
+            <div className="p-3 bg-[#FAF9F5] border border-[#E2E1D9] rounded text-[11px] font-mono text-[#556372] space-y-1">
+              <div>
+                <span className="text-[#8B98A6]">Registered Email:</span>{" "}
+                <strong className="text-[#13171C]">{user?.email || "customer@digitalheroes.demo"}</strong>
+              </div>
+              <div>
+                <span className="text-[#8B98A6]">Account Role:</span>{" "}
+                <span className="text-emerald-700 font-bold uppercase">{user?.role || "CUSTOMER"}</span>
+              </div>
+            </div>
+
+            {passMsg && (
+              <div className="p-3 bg-emerald-50 border border-emerald-300 rounded text-emerald-900 text-xs font-mono">
+                {passMsg}
+              </div>
+            )}
+
+            <form onSubmit={handleUpdatePassword} className="space-y-3 text-xs">
+              <div>
+                <label className="block text-[#4B5663] font-mono text-[10px] uppercase font-bold mb-1">
+                  New Password
+                </label>
+                <input
+                  type="password"
+                  placeholder="Min 6 characters"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full bg-white border border-[#CFCECB] rounded p-2 text-sm text-[#13171C] focus:border-[#E65A28] focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[#4B5663] font-mono text-[10px] uppercase font-bold mb-1">
+                  Confirm New Password
+                </label>
+                <input
+                  type="password"
+                  placeholder="Repeat new password"
+                  value={confirmNewPassword}
+                  onChange={(e) => setConfirmNewPassword(e.target.value)}
+                  className="w-full bg-white border border-[#CFCECB] rounded p-2 text-sm text-[#13171C] focus:border-[#E65A28] focus:outline-none"
+                />
+              </div>
+
+              <div className="pt-2">
+                <Button variant="outline" type="submit" size="sm" disabled={isUpdatingPass}>
+                  {isUpdatingPass ? "Updating Password..." : "Change Account Password"}
                 </Button>
-              </TableCell>
-            </TableRow>
-          ))}
-        </Table>
+              </div>
+            </form>
+          </Card>
+        </div>
       </section>
 
       {/* Bespoke Quote Request Modal */}
@@ -812,6 +1142,163 @@ export default function CustomerDashboardPage() {
                   onClick={() => setSelectedInvoice(null)}
                 >
                   Close Receipt
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Complete Order Details Modal */}
+      {selectedOrderDetails && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full p-6 sm:p-8 space-y-6 shadow-2xl border border-[#DCDAD0] max-h-[90vh] overflow-y-auto">
+            <div className="flex items-start justify-between border-b border-[#ECEBE4] pb-4">
+              <div>
+                <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#E65A28]">
+                  Order Specifications &amp; Tracking
+                </span>
+                <h3 className="text-xl font-extrabold text-[#13171C] mt-0.5">
+                  {selectedOrderDetails.orderNumber}
+                </h3>
+                <span className="text-xs font-mono text-[#7A8795]">
+                  Placed {selectedOrderDetails.createdAt.replace("T", " ").slice(0, 16)} UTC
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant={selectedOrderDetails.stage}>{selectedOrderDetails.stage}</Badge>
+                <Badge variant="neutral">{selectedOrderDetails.status}</Badge>
+              </div>
+            </div>
+
+            {/* Product & Technical Specs */}
+            <div className="space-y-3 text-xs font-mono">
+              <div className="p-3.5 bg-[#FAF9F5] rounded border border-[#ECEBE4] space-y-1.5">
+                <div className="text-sm font-bold text-[#13171C]">
+                  {selectedOrderDetails.productName} ({selectedOrderDetails.divisionName})
+                </div>
+                <div className="text-[#596674]">{selectedOrderDetails.specsSummary}</div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-2 border-t border-[#ECEBE4] text-[11px]">
+                  <div>
+                    <span className="text-[#8896A4] block">DIMENSIONS</span>
+                    <span className="font-bold text-[#13171C]">
+                      {selectedOrderDetails.dimensions.widthMm} × {selectedOrderDetails.dimensions.heightMm} mm
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[#8896A4] block">QUANTITY</span>
+                    <span className="font-bold text-[#13171C]">
+                      {selectedOrderDetails.quantity.toLocaleString()} units
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[#8896A4] block">PROOF VERSION</span>
+                    <span className="font-bold text-[#E65A28]">
+                      {selectedOrderDetails.proofVersion} ({selectedOrderDetails.isProofApproved ? "Approved" : "Pending Sign-off"})
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Substrate & Finish Options */}
+              <div className="p-3 bg-[#FAF9F5] rounded border border-[#ECEBE4] grid grid-cols-3 gap-2 text-[11px]">
+                <div>
+                  <span className="text-[#8896A4] block">SUBSTRATE</span>
+                  <span className="font-semibold text-[#13171C]">
+                    {selectedOrderDetails.selectedParameters.material?.name || "Standard Substrate"}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[#8896A4] block">FINISH</span>
+                  <span className="font-semibold text-[#13171C]">
+                    {selectedOrderDetails.selectedParameters.finish?.name || "Standard"}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[#8896A4] block">CUT TYPE</span>
+                  <span className="font-semibold text-[#13171C]">
+                    {selectedOrderDetails.selectedParameters.cutType?.name || "Standard Trim"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Shipping & Payment Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="p-3 bg-[#FAF9F5] rounded border border-[#ECEBE4]">
+                  <span className="text-[#8896A4] uppercase font-bold text-[10px] block">DELIVERY ADDRESS</span>
+                  <div className="font-bold text-[#13171C] mt-1">{selectedOrderDetails.shippingAddress.recipientName}</div>
+                  {selectedOrderDetails.shippingAddress.companyName && (
+                    <div className="text-[#596674]">{selectedOrderDetails.shippingAddress.companyName}</div>
+                  )}
+                  <div className="text-[#596674]">{selectedOrderDetails.shippingAddress.addressLine1}</div>
+                  <div className="text-[#596674]">
+                    {selectedOrderDetails.shippingAddress.city}, {selectedOrderDetails.shippingAddress.postcode}
+                  </div>
+                  <div className="text-[#596674]">{selectedOrderDetails.shippingAddress.country}</div>
+                </div>
+
+                <div className="p-3 bg-[#FAF9F5] rounded border border-[#ECEBE4]">
+                  <span className="text-[#8896A4] uppercase font-bold text-[10px] block">PAYMENT AUDIT</span>
+                  <div className="mt-1 flex items-center gap-1.5">
+                    <span className="text-emerald-700 font-bold uppercase">PAID VIA STRIPE</span>
+                    <span className="text-[10px] text-[#7A8795]">
+                      ({selectedOrderDetails.paymentDetails.cardBrand?.toUpperCase()} •••• {selectedOrderDetails.paymentDetails.cardLast4 || "4242"})
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-[#7A8795] mt-1 break-all">
+                    TxID: {selectedOrderDetails.paymentDetails.transactionId || selectedOrderDetails.paymentDetails.sessionId}
+                  </div>
+                  <div className="mt-2 pt-2 border-t border-[#ECEBE4] flex justify-between font-bold text-[#13171C]">
+                    <span>Total Paid (inc. VAT):</span>
+                    <span className="text-[#E65A28]">
+                      £{(selectedOrderDetails.pricing.totalCents / 100).toFixed(2)} GBP
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-3 pt-4 border-t border-[#ECEBE4]">
+              <div className="text-xs font-mono text-[#5B6877]">
+                <a
+                  href="#proofs"
+                  onClick={() => setSelectedOrderDetails(null)}
+                  className="underline text-[#E65A28] hover:text-[#c4491c] font-bold"
+                >
+                  Review Proof Sign-off &rarr;
+                </a>
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const id = selectedOrderDetails.id;
+                    setSelectedOrderDetails(null);
+                    handleViewInvoice(id);
+                  }}
+                >
+                  <IconDownload className="w-3.5 h-3.5 mr-1" /> View Invoice
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={isReordering}
+                  onClick={() => {
+                    const id = selectedOrderDetails.id;
+                    setSelectedOrderDetails(null);
+                    handleReorder(id, false);
+                  }}
+                >
+                  1-Click Repeat
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => setSelectedOrderDetails(null)}
+                >
+                  Close
                 </Button>
               </div>
             </div>

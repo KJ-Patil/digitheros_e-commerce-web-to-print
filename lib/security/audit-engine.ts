@@ -157,7 +157,7 @@ export function runComprehensiveSecurityAudit(): SecurityAuditReport {
   // Test 1.3: Customer A attempts to approve Customer B's proof revision
   try {
     approveProofRevision(
-      "o1000000-0000-0000-0000-000000000003",
+      "c1000000-0000-0000-0000-000000000003",
       1,
       { id: CUST_A_ID, email: "alex@demo.co", fullName: "Alex Miller", role: "customer" },
       "Malicious approval by Customer A"
@@ -195,7 +195,7 @@ export function runComprehensiveSecurityAudit(): SecurityAuditReport {
   // Test 1.4: Customer A attempts to request changes on Customer B's proof revision
   try {
     requestProofChanges(
-      "o1000000-0000-0000-0000-000000000003",
+      "c1000000-0000-0000-0000-000000000003",
       1,
       { id: CUST_A_ID, email: "alex@demo.co", fullName: "Alex Miller", role: "customer" },
       "Malicious change request"
@@ -232,7 +232,7 @@ export function runComprehensiveSecurityAudit(): SecurityAuditReport {
 
   // Test 1.5: Customer A attempts to reorder from Customer B's historical order
   try {
-    reorderFromExistingOrder("o1000000-0000-0000-0000-000000000003", {
+    reorderFromExistingOrder("c1000000-0000-0000-0000-000000000003", {
       id: CUST_A_ID,
       email: "alex@demo.co",
       fullName: "Alex Miller",
@@ -244,7 +244,7 @@ export function runComprehensiveSecurityAudit(): SecurityAuditReport {
       title: "Cross-Tenant 1-Click Reorder Spoofing",
       description: "Customer A attempts to reorder using Customer B's past order ID",
       attackVector: "POST /api/orders/reorder { sourceOrderId: Customer B Order }",
-      payloadTested: "{ sourceOrderId: 'o1000000-0000-0000-0000-000000000003', user: Customer A }",
+      payloadTested: "{ sourceOrderId: 'c1000000-0000-0000-0000-000000000003', user: Customer A }",
       expectedOutcome: "Throw SECURITY_VIOLATION error",
       actualOutcome: "Order created successfully from foreign order",
       passed: false,
@@ -259,7 +259,7 @@ export function runComprehensiveSecurityAudit(): SecurityAuditReport {
       title: "Cross-Tenant 1-Click Reorder Spoofing",
       description: "Customer A attempts to reorder using Customer B's past order ID",
       attackVector: "POST /api/orders/reorder { sourceOrderId: Customer B Order }",
-      payloadTested: "{ sourceOrderId: 'o1000000-0000-0000-0000-000000000003', user: Customer A }",
+      payloadTested: "{ sourceOrderId: 'c1000000-0000-0000-0000-000000000003', user: Customer A }",
       expectedOutcome: "Throw SECURITY_VIOLATION error",
       actualOutcome: `Blocked: ${msg}`,
       passed: msg.includes("SECURITY_VIOLATION"),

@@ -19,10 +19,13 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) return;
+    setErrorMsg(null);
+    setMsg(null);
     const res = await loginWithEmail(email, password);
     if (res.success) {
       setMsg("Authenticated successfully.");
@@ -31,6 +34,8 @@ export default function LoginPage() {
       } else {
         router.push("/customer/dashboard");
       }
+    } else {
+      setErrorMsg(res.error || "Authentication failed. Please verify your email and password.");
     }
   };
 
@@ -88,6 +93,12 @@ export default function LoginPage() {
                 Sign Out
               </Button>
             </div>
+          </div>
+        )}
+
+        {errorMsg && (
+          <div className="mb-6 p-3 bg-rose-50 border border-rose-300 rounded text-rose-900 text-xs font-mono">
+            ⚠️ {errorMsg}
           </div>
         )}
 
@@ -199,7 +210,15 @@ export default function LoginPage() {
               </div>
 
               <div>
-                <Label htmlFor="login-pass">Password</Label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <Label htmlFor="login-pass" className="mb-0">Password</Label>
+                  <Link
+                    href="/forgot-password"
+                    className="text-xs text-[#E65A28] hover:underline font-medium"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
                 <Input
                   id="login-pass"
                   type="password"
@@ -220,6 +239,21 @@ export default function LoginPage() {
                 >
                   Continue as Visitor
                 </Link>
+              </div>
+
+              <div className="pt-4 border-t border-[#E8E7E0] space-y-2">
+                <p className="text-xs text-[#5D6B7A] text-center">
+                  Don&apos;t have an account yet?{" "}
+                  <Link href="/register" className="text-[#E65A28] font-bold hover:underline">
+                    Register Customer Account →
+                  </Link>
+                </p>
+                <p className="text-xs text-[#788695] text-center">
+                  Factory Staff?{" "}
+                  <Link href="/admin/login" className="text-[#13171C] font-semibold hover:underline">
+                    Dedicated Admin Sign In →
+                  </Link>
+                </p>
               </div>
             </form>
           </Card>

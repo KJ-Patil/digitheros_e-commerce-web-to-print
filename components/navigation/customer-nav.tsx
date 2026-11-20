@@ -66,10 +66,10 @@ export function CustomerNav() {
               Order History
             </Link>
             <Link
-              href="/customer/dashboard#invoices"
-              className="px-2.5 py-1.5 hover:text-[#13171C] transition-colors"
+              href="/customer/dashboard#profile"
+              className="px-2.5 py-1.5 hover:text-[#13171C] transition-colors font-medium text-[#E65A28]"
             >
-              Invoices
+              Profile &amp; Security
             </Link>
           </nav>
         </div>

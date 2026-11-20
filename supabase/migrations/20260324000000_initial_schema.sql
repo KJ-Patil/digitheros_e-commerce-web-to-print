@@ -2,45 +2,66 @@
 -- DIGITAL HEROES — COMPLETE POSTGRESQL DATABASE SCHEMA (PRD LEVEL 2)
 -- Migration: 20260324000000_initial_schema.sql
 -- Description: Core tables, constraints, indexes, and Row-Level Security (RLS)
+-- Idempotent: Can be run multiple times safely without errors
 -- ========================================================================
 
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- ------------------------------------------------------------------------
--- 1. ENUMS
+-- 1. ENUMS (Safe idempotent creation)
 -- ------------------------------------------------------------------------
-CREATE TYPE user_role AS ENUM ('customer', 'admin');
+DO $$ BEGIN
+  CREATE TYPE user_role AS ENUM ('customer', 'admin');
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
 
-CREATE TYPE pipeline_stage AS ENUM (
-  'QUOTE',
-  'ORDER',
-  'ARTWORK',
-  'PROOF',
-  'PRODUCTION',
-  'COMPLETED'
-);
+DO $$ BEGIN
+  CREATE TYPE pipeline_stage AS ENUM (
+    'QUOTE',
+    'ORDER',
+    'ARTWORK',
+    'PROOF',
+    'PRODUCTION',
+    'COMPLETED'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
 
-CREATE TYPE file_preflight_status AS ENUM (
-  'PENDING',
-  'PASSED',
-  'WARNING',
-  'FAILED'
-);
+DO $$ BEGIN
+  CREATE TYPE file_preflight_status AS ENUM (
+    'PENDING',
+    'PASSED',
+    'WARNING',
+    'FAILED'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
 
-CREATE TYPE production_file_type AS ENUM (
-  'PDF',
-  'PNG',
-  'CSV_MERGE_ZIP'
-);
+DO $$ BEGIN
+  CREATE TYPE production_file_type AS ENUM (
+    'PDF',
+    'PNG',
+    'CSV_MERGE_ZIP'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
 
-CREATE TYPE payment_status AS ENUM (
-  'PENDING',
-  'PROCESSING',
-  'SUCCEEDED',
-  'FAILED',
-  'REFUNDED'
-);
+DO $$ BEGIN
+  CREATE TYPE payment_status AS ENUM (
+    'PENDING',
+    'PROCESSING',
+    'SUCCEEDED',
+    'FAILED',
+    'REFUNDED'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
 
 -- ------------------------------------------------------------------------
 -- 2. PROFILES & ROLES (linked to auth.users)
@@ -335,15 +356,18 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- ------------------------------------------------------------------------
 -- PROFILES POLICIES
 -- ------------------------------------------------------------------------
+DROP POLICY IF EXISTS "Public profiles can read self" ON public.profiles;
 CREATE POLICY "Public profiles can read self"
   ON public.profiles FOR SELECT
   USING (id = auth.uid() OR public.is_admin());
 
+DROP POLICY IF EXISTS "Users can update self" ON public.profiles;
 CREATE POLICY "Users can update self"
   ON public.profiles FOR UPDATE
   USING (id = auth.uid())
   WITH CHECK (id = auth.uid() AND role = (SELECT role FROM public.profiles WHERE id = auth.uid()));
 
+DROP POLICY IF EXISTS "Admins can manage all profiles" ON public.profiles;
 CREATE POLICY "Admins can manage all profiles"
   ON public.profiles FOR ALL
   USING (public.is_admin());
@@ -351,34 +375,42 @@ CREATE POLICY "Admins can manage all profiles"
 -- ------------------------------------------------------------------------
 -- PUBLIC CATALOG POLICIES (Divisions, Products, Rules, Templates)
 -- ------------------------------------------------------------------------
+DROP POLICY IF EXISTS "Allow public read of active divisions" ON public.product_divisions;
 CREATE POLICY "Allow public read of active divisions"
   ON public.product_divisions FOR SELECT
   USING (is_active = true OR public.is_admin());
 
+DROP POLICY IF EXISTS "Allow public read of active products" ON public.products;
 CREATE POLICY "Allow public read of active products"
   ON public.products FOR SELECT
   USING (is_active = true OR public.is_admin());
 
+DROP POLICY IF EXISTS "Allow public read of product parameters" ON public.product_parameters;
 CREATE POLICY "Allow public read of product parameters"
   ON public.product_parameters FOR SELECT
   USING (true);
 
+DROP POLICY IF EXISTS "Allow public read of pricing rules" ON public.pricing_rules;
 CREATE POLICY "Allow public read of pricing rules"
   ON public.pricing_rules FOR SELECT
   USING (true);
 
+DROP POLICY IF EXISTS "Allow public read of volume discounts" ON public.volume_discounts;
 CREATE POLICY "Allow public read of volume discounts"
   ON public.volume_discounts FOR SELECT
   USING (true);
 
+DROP POLICY IF EXISTS "Allow public read of active templates" ON public.templates;
 CREATE POLICY "Allow public read of active templates"
   ON public.templates FOR SELECT
   USING (is_active = true OR public.is_admin());
 
+DROP POLICY IF EXISTS "Admins can manage catalog" ON public.product_divisions;
 CREATE POLICY "Admins can manage catalog"
   ON public.product_divisions FOR ALL
   USING (public.is_admin());
 
+DROP POLICY IF EXISTS "Admins can manage products" ON public.products;
 CREATE POLICY "Admins can manage products"
   ON public.products FOR ALL
   USING (public.is_admin());
@@ -386,11 +418,13 @@ CREATE POLICY "Admins can manage products"
 -- ------------------------------------------------------------------------
 -- DESIGNS & ARTWORK POLICIES
 -- ------------------------------------------------------------------------
+DROP POLICY IF EXISTS "Customers can manage own designs" ON public.designs;
 CREATE POLICY "Customers can manage own designs"
   ON public.designs FOR ALL
   USING (customer_id = auth.uid() OR public.is_admin())
   WITH CHECK (customer_id = auth.uid() OR public.is_admin());
 
+DROP POLICY IF EXISTS "Customers can manage own artwork uploads" ON public.artwork_uploads;
 CREATE POLICY "Customers can manage own artwork uploads"
   ON public.artwork_uploads FOR ALL
   USING (customer_id = auth.uid() OR public.is_admin())
@@ -399,18 +433,22 @@ CREATE POLICY "Customers can manage own artwork uploads"
 -- ------------------------------------------------------------------------
 -- ORDERS & ORDER ITEMS POLICIES
 -- ------------------------------------------------------------------------
+DROP POLICY IF EXISTS "Customers can read own orders" ON public.orders;
 CREATE POLICY "Customers can read own orders"
   ON public.orders FOR SELECT
   USING (customer_id = auth.uid() OR public.is_admin());
 
+DROP POLICY IF EXISTS "Customers can create own orders" ON public.orders;
 CREATE POLICY "Customers can create own orders"
   ON public.orders FOR INSERT
   WITH CHECK (customer_id = auth.uid() OR public.is_admin());
 
+DROP POLICY IF EXISTS "Admins can manage all orders" ON public.orders;
 CREATE POLICY "Admins can manage all orders"
   ON public.orders FOR ALL
   USING (public.is_admin());
 
+DROP POLICY IF EXISTS "Customers can read own order items" ON public.order_items;
 CREATE POLICY "Customers can read own order items"
   ON public.order_items FOR SELECT
   USING (
@@ -421,6 +459,7 @@ CREATE POLICY "Customers can read own order items"
     )
   );
 
+DROP POLICY IF EXISTS "Customers can insert own order items" ON public.order_items;
 CREATE POLICY "Customers can insert own order items"
   ON public.order_items FOR INSERT
   WITH CHECK (
@@ -434,6 +473,7 @@ CREATE POLICY "Customers can insert own order items"
 -- ------------------------------------------------------------------------
 -- PROOF VERSIONS & APPROVALS POLICIES
 -- ------------------------------------------------------------------------
+DROP POLICY IF EXISTS "Customers can read proofs for own orders" ON public.proof_versions;
 CREATE POLICY "Customers can read proofs for own orders"
   ON public.proof_versions FOR SELECT
   USING (
@@ -444,6 +484,7 @@ CREATE POLICY "Customers can read proofs for own orders"
     )
   );
 
+DROP POLICY IF EXISTS "Customers can insert approvals for own proofs" ON public.proof_approvals;
 CREATE POLICY "Customers can insert approvals for own proofs"
   ON public.proof_approvals FOR INSERT
   WITH CHECK (
@@ -456,6 +497,7 @@ CREATE POLICY "Customers can insert approvals for own proofs"
     )
   );
 
+DROP POLICY IF EXISTS "Customers can read approvals for own proofs" ON public.proof_approvals;
 CREATE POLICY "Customers can read approvals for own proofs"
   ON public.proof_approvals FOR SELECT
   USING (
@@ -467,6 +509,7 @@ CREATE POLICY "Customers can read approvals for own proofs"
     )
   );
 
+DROP POLICY IF EXISTS "Admins can manage all proof versions and approvals" ON public.proof_versions;
 CREATE POLICY "Admins can manage all proof versions and approvals"
   ON public.proof_versions FOR ALL
   USING (public.is_admin());
@@ -475,6 +518,7 @@ CREATE POLICY "Admins can manage all proof versions and approvals"
 -- PRODUCTION FILES POLICIES (STRICT STAFF-ONLY RULE)
 -- Note: Customers have ZERO SELECT access to production_files!
 -- ------------------------------------------------------------------------
+DROP POLICY IF EXISTS "Production files restricted to admin staff only" ON public.production_files;
 CREATE POLICY "Production files restricted to admin staff only"
   ON public.production_files FOR ALL
   USING (public.is_admin());
@@ -482,6 +526,7 @@ CREATE POLICY "Production files restricted to admin staff only"
 -- ------------------------------------------------------------------------
 -- PAYMENTS & INVOICES POLICIES
 -- ------------------------------------------------------------------------
+DROP POLICY IF EXISTS "Customers can read own payments" ON public.payments;
 CREATE POLICY "Customers can read own payments"
   ON public.payments FOR SELECT
   USING (
@@ -492,6 +537,7 @@ CREATE POLICY "Customers can read own payments"
     )
   );
 
+DROP POLICY IF EXISTS "Customers can read own invoices" ON public.invoices;
 CREATE POLICY "Customers can read own invoices"
   ON public.invoices FOR SELECT
   USING (
@@ -502,6 +548,7 @@ CREATE POLICY "Customers can read own invoices"
     )
   );
 
+DROP POLICY IF EXISTS "Admins can manage all invoices and payments" ON public.invoices;
 CREATE POLICY "Admins can manage all invoices and payments"
   ON public.invoices FOR ALL
   USING (public.is_admin());
@@ -509,6 +556,7 @@ CREATE POLICY "Admins can manage all invoices and payments"
 -- ------------------------------------------------------------------------
 -- NOTIFICATIONS POLICIES
 -- ------------------------------------------------------------------------
+DROP POLICY IF EXISTS "Users can manage own notifications" ON public.notifications;
 CREATE POLICY "Users can manage own notifications"
   ON public.notifications FOR ALL
   USING (user_id = auth.uid() OR public.is_admin())
@@ -517,6 +565,7 @@ CREATE POLICY "Users can manage own notifications"
 -- ------------------------------------------------------------------------
 -- ORDER AUDIT HISTORY POLICIES
 -- ------------------------------------------------------------------------
+DROP POLICY IF EXISTS "Customers can view stage history of own orders" ON public.order_status_history;
 CREATE POLICY "Customers can view stage history of own orders"
   ON public.order_status_history FOR SELECT
   USING (
@@ -527,6 +576,7 @@ CREATE POLICY "Customers can view stage history of own orders"
     )
   );
 
+DROP POLICY IF EXISTS "Admins can insert and manage order status history" ON public.order_status_history;
 CREATE POLICY "Admins can insert and manage order status history"
   ON public.order_status_history FOR ALL
   USING (public.is_admin());

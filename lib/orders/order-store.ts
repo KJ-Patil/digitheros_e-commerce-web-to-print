@@ -112,7 +112,7 @@ export interface OrderInvoice {
 // Initial seed orders
 const INITIAL_ORDERS: StoredOrder[] = [
   {
-    id: "o1000000-0000-0000-0000-000000000001",
+    id: "c1000000-0000-0000-0000-000000000001",
     orderNumber: "ORD-2026-0891",
     customerId: "00000000-0000-0000-0000-000000000001",
     customerName: "Alex Miller",
@@ -163,7 +163,7 @@ const INITIAL_ORDERS: StoredOrder[] = [
     updatedAt: "2026-03-23T16:42:00Z",
   },
   {
-    id: "o1000000-0000-0000-0000-000000000002",
+    id: "c1000000-0000-0000-0000-000000000002",
     orderNumber: "ORD-2026-0892",
     customerId: "00000000-0000-0000-0000-000000000001",
     customerName: "Alex Miller",
@@ -213,7 +213,7 @@ const INITIAL_ORDERS: StoredOrder[] = [
     updatedAt: "2026-03-24T09:30:00Z",
   },
   {
-    id: "o1000000-0000-0000-0000-000000000050",
+    id: "c1000000-0000-0000-0000-000000000050",
     orderNumber: "ORD-2026-0850",
     customerId: "00000000-0000-0000-0000-000000000001",
     customerName: "Alex Miller",
@@ -264,7 +264,7 @@ const INITIAL_ORDERS: StoredOrder[] = [
     updatedAt: "2026-02-16T15:00:00Z",
   },
   {
-    id: "o1000000-0000-0000-0000-000000000003",
+    id: "c1000000-0000-0000-0000-000000000003",
     orderNumber: "ORD-2026-0893",
     customerId: "00000000-0000-0000-0000-000000000002",
     customerName: "Sarah Jenkins",
@@ -477,7 +477,7 @@ export function createCheckoutSession(input: CheckoutSessionInput): {
 
   orderCounter++;
   const orderNum = `ORD-2026-0${orderCounter}`;
-  const orderId = `o1000000-0000-0000-0000-${String(orderCounter).padStart(12, "0")}`;
+  const orderId = `c1000000-0000-0000-0000-${String(orderCounter).padStart(12, "0")}`;
   const sessionId = `cs_test_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
   const newOrder: StoredOrder = {
@@ -667,7 +667,7 @@ export function reorderFromExistingOrder(
 
   orderCounter++;
   const newOrderNum = `ORD-2026-0${orderCounter}`;
-  const newOrderId = `o1000000-0000-0000-0000-${String(orderCounter).padStart(12, "0")}`;
+  const newOrderId = `c1000000-0000-0000-0000-${String(orderCounter).padStart(12, "0")}`;
 
   const newOrder: StoredOrder = {
     id: newOrderId,
@@ -777,7 +777,7 @@ export function reorderFromSavedDesign(
 
   orderCounter++;
   const newOrderNum = `ORD-2026-0${orderCounter}`;
-  const newOrderId = `o1000000-0000-0000-0000-${String(orderCounter).padStart(12, "0")}`;
+  const newOrderId = `c1000000-0000-0000-0000-${String(orderCounter).padStart(12, "0")}`;
 
   const newOrder: StoredOrder = {
     id: newOrderId,
@@ -868,6 +868,20 @@ export function reorderFromSavedDesign(
  */
 export function getSavedDesigns(customerId: string): SavedDesignTemplate[] {
   return SAVED_DESIGNS_STORE.filter((d) => d.customerId === customerId);
+}
+
+/**
+ * Delete a saved design template
+ */
+export function deleteSavedDesign(designId: string, customerId?: string): boolean {
+  const index = SAVED_DESIGNS_STORE.findIndex(
+    (d) => d.id === designId && (!customerId || d.customerId === customerId)
+  );
+  if (index !== -1) {
+    SAVED_DESIGNS_STORE.splice(index, 1);
+    return true;
+  }
+  return false;
 }
 
 /**

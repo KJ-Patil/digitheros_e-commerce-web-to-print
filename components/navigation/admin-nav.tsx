@@ -38,34 +38,34 @@ export function AdminNav() {
             </div>
           </Link>
 
-          <nav className="hidden md:flex items-center gap-4 text-xs font-mono uppercase tracking-wider text-[#A0ACB9]">
+          <nav className="hidden lg:flex items-center gap-3 text-xs font-mono uppercase tracking-wider text-[#A0ACB9]">
             <Link
               href="/admin/production"
-              className="px-2.5 py-1.5 rounded bg-[#242C35] text-white font-semibold"
+              className="px-2.5 py-1.5 rounded hover:bg-[#242C35] hover:text-white transition-colors"
             >
-              Job Pipeline
+              Pipeline
             </Link>
             <Link
-              href="/admin/production#orders"
-              className="px-2.5 py-1.5 hover:text-white transition-colors"
+              href="/admin/customers"
+              className="px-2.5 py-1.5 rounded hover:bg-[#242C35] hover:text-white transition-colors"
             >
-              Order Queue
+              Customers
             </Link>
             <Link
-              href="/admin/production#files"
-              className="px-2.5 py-1.5 hover:text-white transition-colors"
+              href="/admin/products"
+              className="px-2.5 py-1.5 rounded hover:bg-[#242C35] hover:text-white transition-colors"
             >
-              Print Files
+              Products &amp; Materials
             </Link>
             <Link
-              href="/admin/production#reports"
-              className="px-2.5 py-1.5 hover:text-white transition-colors"
+              href="/admin/pricing"
+              className="px-2.5 py-1.5 rounded hover:bg-[#242C35] hover:text-white transition-colors"
             >
-              Throughput & Reports
+              Pricing Rules
             </Link>
             <Link
               href="/admin/security"
-              className="px-2.5 py-1.5 hover:text-white transition-colors text-emerald-400 font-bold"
+              className="px-2.5 py-1.5 rounded hover:bg-[#242C35] hover:text-white transition-colors text-emerald-400 font-bold"
             >
               Security Audit
             </Link>
