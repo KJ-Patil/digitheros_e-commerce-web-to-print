@@ -48,6 +48,12 @@ export function CustomerNav() {
               Proofs & Versions
             </Link>
             <Link
+              href="/customer/dashboard#alerts"
+              className="px-2.5 py-1.5 hover:text-[#13171C] transition-colors text-[#E65A28] font-bold"
+            >
+              Alerts
+            </Link>
+            <Link
               href="/customer/dashboard#designs"
               className="px-2.5 py-1.5 hover:text-[#13171C] transition-colors"
             >

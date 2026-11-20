@@ -21,6 +21,7 @@ import {
 
 interface Division {
   id: string;
+  slug: string;
   number: string;
   title: string;
   tagline: string;
@@ -31,6 +32,7 @@ interface Division {
 const DIVISIONS: Division[] = [
   {
     id: "labels",
+    slug: "labels",
     number: "01",
     title: "Labels & Stickers",
     tagline: "Custom die-cut waterproof vinyl, metallic foils, and roll labels.",
@@ -39,6 +41,7 @@ const DIVISIONS: Division[] = [
   },
   {
     id: "race",
+    slug: "race-numbers",
     number: "02",
     title: "Race & Event Numbers",
     tagline: "Waterproof Tyvek bibs with CSV variable data and barcode merging.",
@@ -47,6 +50,7 @@ const DIVISIONS: Division[] = [
   },
   {
     id: "mtb",
+    slug: "mtb-boards",
     number: "03",
     title: "MTB Boards",
     tagline: "Heavyweight polypropylene downhill & enduro handlebar plates.",
@@ -55,6 +59,7 @@ const DIVISIONS: Division[] = [
   },
   {
     id: "stamps",
+    slug: "stamps",
     number: "04",
     title: "Commercial Stamps",
     tagline: "Self-inking precision rubber stamps for legal and corporate notary.",
@@ -63,6 +68,7 @@ const DIVISIONS: Division[] = [
   },
   {
     id: "trophies",
+    slug: "trophies",
     number: "05",
     title: "Laser Trophies",
     tagline: "Multi-layer acrylic and hardwood awards with precision rotary engraving.",
@@ -71,6 +77,7 @@ const DIVISIONS: Division[] = [
   },
   {
     id: "laser",
+    slug: "laser-cut",
     number: "06",
     title: "Laser-Cut Work",
     tagline: "Industrial cutting and etching on architectural metals, woods and plastics.",
@@ -120,7 +127,7 @@ export default function StorefrontHomePage() {
               Demo Role Navigation:
             </span>
             <span className="text-[#647281] hidden sm:inline">
-              Three roles share one single backend (PRD § 03)
+              Three roles share one single backend (Multi-Role Architecture)
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -214,7 +221,7 @@ export default function StorefrontHomePage() {
           <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 pb-4 border-b border-[#DCDAD0] gap-4">
             <div>
               <span className="text-xs font-mono font-bold tracking-widest uppercase text-[#E65A28]">
-                Catalogue § 04
+                Product Catalogue
               </span>
               <h2 className="text-2xl sm:text-3xl font-extrabold text-[#13171C] tracking-tight mt-0.5">
                 The Six Print Divisions
@@ -257,12 +264,17 @@ export default function StorefrontHomePage() {
                     {div.specs}
                   </div>
                   <div className="mt-4 flex items-center justify-between">
-                    <span className="text-xs font-bold text-[#E65A28] flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                      Configure Product →
-                    </span>
-                    <Badge variant="neutral" size="sm">
-                      Parametric
-                    </Badge>
+                    <Link
+                      href={`/divisions/${div.slug}`}
+                      className="text-xs font-bold text-[#E65A28] flex items-center gap-1 hover:underline"
+                    >
+                      View Division & Range →
+                    </Link>
+                    <Link href={`/products/${div.slug === "labels" ? "vinyl-stickers" : div.slug === "race" ? "tyvek-race-bibs" : div.slug === "mtb" ? "mtb-handlebar-plates" : div.slug === "stamps" ? "self-inking-stamp" : div.slug === "trophies" ? "acrylic-podium-award" : "precision-laser-parts"}`}>
+                      <Badge variant="neutral" size="sm" className="hover:border-[#E65A28] cursor-pointer">
+                        Configure
+                      </Badge>
+                    </Link>
                   </div>
                 </div>
               </div>
@@ -276,7 +288,7 @@ export default function StorefrontHomePage() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
               <div className="lg:col-span-5">
                 <span className="text-xs font-mono font-bold tracking-widest uppercase text-[#E65A28]">
-                  Instant Engine § 05
+                  Instant Pricing Engine
                 </span>
                 <h2 className="text-2xl sm:text-3xl font-extrabold text-[#13171C] tracking-tight mt-1">
                   Live Price Calculator
@@ -416,15 +428,19 @@ export default function StorefrontHomePage() {
           <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 pb-4 border-b border-[#DCDAD0] gap-4">
             <div>
               <span className="text-xs font-mono font-bold tracking-widest uppercase text-[#E65A28]">
-                Real Work Gallery § 12
+                Real Work Gallery
               </span>
               <h2 className="text-2xl sm:text-3xl font-extrabold text-[#13171C] tracking-tight mt-0.5">
                 Organised by Product Family
               </h2>
             </div>
-            <p className="text-xs font-mono text-[#6A7888] max-w-sm">
-              Live examples from our factory floor. All artwork shown passed preflight validation.
-            </p>
+            <div className="flex items-center gap-3">
+              <Link href="/gallery">
+                <Button variant="outline" size="sm">
+                  View Full Gallery Archive →
+                </Button>
+              </Link>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

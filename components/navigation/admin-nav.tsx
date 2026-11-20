@@ -63,6 +63,12 @@ export function AdminNav() {
             >
               Throughput & Reports
             </Link>
+            <Link
+              href="/admin/security"
+              className="px-2.5 py-1.5 hover:text-white transition-colors text-emerald-400 font-bold"
+            >
+              Security Audit
+            </Link>
           </nav>
         </div>
 

@@ -25,7 +25,7 @@ export function PublicNav() {
             <Link href="/#divisions" className="hover:text-[#13171C] transition-colors">
               Divisions (6)
             </Link>
-            <Link href="/#gallery" className="hover:text-[#13171C] transition-colors">
+            <Link href="/gallery" className="hover:text-[#13171C] transition-colors">
               Work Gallery
             </Link>
             <Link href="/#calculator" className="hover:text-[#13171C] transition-colors">

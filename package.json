@@ -3,11 +3,23 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "node scripts/build-css.mjs",
     "dev": "next dev",
+    "prebuild": "node scripts/build-css.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node scripts/test-permissions.mjs"
+    "test": "node scripts/verify-supabase-schema.mjs && node scripts/test-permissions.mjs && node --experimental-strip-types scripts/test-pricing.mjs && node --experimental-strip-types scripts/test-designer.mjs && node --experimental-strip-types scripts/test-approval-gate.mjs && node --experimental-strip-types scripts/test-orders-checkout.mjs && node --experimental-strip-types scripts/test-print-engine.mjs && node --experimental-strip-types scripts/test-admin-pipeline.mjs && node --experimental-strip-types scripts/test-email-notifications.mjs && node --experimental-strip-types scripts/test-security-audit.mjs",
+    "test:schema": "node scripts/verify-supabase-schema.mjs",
+    "test:permissions": "node scripts/test-permissions.mjs",
+    "test:pricing": "node --experimental-strip-types scripts/test-pricing.mjs",
+    "test:designer": "node --experimental-strip-types scripts/test-designer.mjs",
+    "test:proofs": "node --experimental-strip-types scripts/test-approval-gate.mjs",
+    "test:orders": "node --experimental-strip-types scripts/test-orders-checkout.mjs",
+    "test:print": "node --experimental-strip-types scripts/test-print-engine.mjs",
+    "test:pipeline": "node --experimental-strip-types scripts/test-admin-pipeline.mjs",
+    "test:email": "node --experimental-strip-types scripts/test-email-notifications.mjs",
+    "test:security": "node --experimental-strip-types scripts/test-security-audit.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.119.2",

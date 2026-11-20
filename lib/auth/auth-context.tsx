@@ -7,7 +7,7 @@ interface AuthContextType {
   user: SessionUser | null;
   isLoading: boolean;
   loginAs: (roleKey: "customer" | "customer-b" | "admin") => void;
-  loginWithEmail: (email: string) => Promise<{ success: boolean; error?: string }>;
+  loginWithEmail: (email: string, password?: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
 }
 

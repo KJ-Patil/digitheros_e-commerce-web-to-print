@@ -37,7 +37,7 @@ export default function DesignSystemPage() {
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <span className="text-xs font-mono font-bold tracking-widest uppercase text-[#E65A28]">
-                Design Specification § 12
+                Design Specification
               </span>
               <h1 className="text-3xl font-extrabold tracking-tight text-[#13171C] mt-1">
                 Boutique-Industrial Design System

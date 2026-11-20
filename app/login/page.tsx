@@ -53,7 +53,7 @@ export default function LoginPage() {
       <main className="flex-1 max-w-4xl w-full mx-auto px-4 py-12">
         <div className="text-center max-w-xl mx-auto mb-8">
           <span className="text-xs font-mono font-bold tracking-widest uppercase text-[#E65A28]">
-            Authentication § 03
+            Authentication &amp; Access
           </span>
           <h1 className="text-3xl font-extrabold tracking-tight text-[#13171C] mt-1">
             Access Digital Heroes
