@@ -1232,15 +1232,15 @@ export default function CustomerDashboardPage() {
                 <div className="p-3.5 bg-blue-50/80 border border-blue-200 rounded-lg space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-blue-900 flex items-center gap-1.5">
-                      <span>📦</span> Internal Order &amp; Delivery Tracking
+                      <span>📦</span> Delivery Tracking (Simulated Mode)
                     </span>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-blue-200 text-blue-900">
-                      {selectedOrderDetails.deliveryTracking.dispatchStatus}
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300">
+                      SIMULATED • {selectedOrderDetails.deliveryTracking.dispatchStatus}
                     </span>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
                     <div>
-                      <span className="text-[#64748B] block text-[10px]">Courier</span>
+                      <span className="text-[#64748B] block text-[10px]">Courier (Simulated)</span>
                       <span className="font-bold text-[#0F172A]">
                         {selectedOrderDetails.deliveryTracking.courierName}
                       </span>
@@ -1262,6 +1262,9 @@ export default function CustomerDashboardPage() {
                         {selectedOrderDetails.deliveryTracking.estimatedDelivery || "2 business days"}
                       </span>
                     </div>
+                  </div>
+                  <div className="text-[10px] text-[#556987] font-mono pt-1 border-t border-blue-100">
+                    ℹ️ Simulated courier tracking generated for internal development &amp; demonstration.
                   </div>
                 </div>
               )}

@@ -10,6 +10,7 @@ export interface ShippingAddress {
   countyOrState?: string;
   postcode: string;
   country: string;
+  phone?: string;
 }
 
 export interface DeliveryTracking {
@@ -587,6 +588,7 @@ export function processPaymentWebhook(event: {
       card_brand?: string;
       card_last4?: string;
       decline_reason?: string;
+      metadata?: Record<string, string>;
     };
   };
 }): { success: boolean; duplicate: boolean; order?: StoredOrder; message: string } {

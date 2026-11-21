@@ -66,6 +66,38 @@ export default function AdminProductionPage() {
   const [trackingStatus, setTrackingStatus] = useState<"DISPATCHED" | "IN_TRANSIT" | "DELIVERED">("DISPATCHED");
   const [trackingEstDelivery, setTrackingEstDelivery] = useState<string>("2 business days");
   const [isSavingTracking, setIsSavingTracking] = useState<boolean>(false);
+  const [isGeneratingLabel, setIsGeneratingLabel] = useState<boolean>(false);
+  const [generatedLabelBase64, setGeneratedLabelBase64] = useState<string | null>(null);
+
+  const handleAutoGenerateLabel = async () => {
+    if (!selectedJobForTracking) return;
+    setIsGeneratingLabel(true);
+    try {
+      const carrier = trackingCourier.includes("DPD") ? "DPD" : "ROYAL_MAIL";
+      const res = await fetch("/api/shipping/create-label", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId: selectedJobForTracking.id,
+          carrier,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to generate label");
+      setTrackingCode(data.result.trackingNumber);
+      setTrackingUrlInput(data.result.trackingUrl);
+      setTrackingEstDelivery(data.result.estimatedDelivery);
+      if (data.result.labelPdfBase64) {
+        setGeneratedLabelBase64(data.result.labelPdfBase64);
+      }
+      setDownloadMsg(`✓ ${data.result.serviceName} label generated (Tracking #${data.result.trackingNumber}).`);
+      setTimeout(() => setDownloadMsg(null), 5000);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Label generation failed");
+    } finally {
+      setIsGeneratingLabel(false);
+    }
+  };
 
   const handleSaveTracking = async () => {
     if (!selectedJobForTracking) return;
@@ -266,8 +298,8 @@ export default function AdminProductionPage() {
     }
   };
 
-  // PDF Download Handler
-  const handleDownload = async (job: ProductionJob) => {
+  // PDF / PNG Production Master Download Handler
+  const handleDownload = async (job: ProductionJob, format: "pdf" | "png" = "pdf") => {
     try {
       const res = await fetch(`/api/production/download/${job.id}`);
       const data = await res.json();
@@ -279,11 +311,12 @@ export default function AdminProductionPage() {
         return;
       }
 
+      const extUpper = format.toUpperCase();
       setDownloadMsg(
-        `Downloading production file: ${data.fileName || job.fileName} (${data.printSpecs?.resolution || "300 DPI"} + ${data.printSpecs?.bleed || "3mm Bleed"}, Gate UNLOCKED)`
+        `Downloading production ${extUpper} master: ${data.fileName || job.fileName} (${data.printSpecs?.resolution || "300 DPI"} + ${data.printSpecs?.bleed || "3mm Bleed"}, FOGRA39 Binary ICC Embedded)`
       );
       if (typeof window !== "undefined") {
-        window.open(`/api/production/download/${job.id}?format=pdf`, "_blank");
+        window.open(`/api/production/download/${job.id}?format=${format}`, "_blank");
       }
       setTimeout(() => setDownloadMsg(null), 5000);
     } catch {
@@ -292,7 +325,7 @@ export default function AdminProductionPage() {
           `APPROVAL GATE BLOCKED:\n\nCannot download production file '${job.fileName}'.\nProof revision ${job.proofVersion} is NOT approved by customer.`
         );
       } else {
-        setDownloadMsg(`Downloading production file: ${job.fileName} (High-res 300 DPI + 3mm Bleed)`);
+        setDownloadMsg(`Downloading production file: ${job.fileName} (${format.toUpperCase()} 300 DPI)`);
         setTimeout(() => setDownloadMsg(null), 4000);
       }
     }
@@ -703,7 +736,7 @@ export default function AdminProductionPage() {
                   <th className="px-4 py-3">Pipeline Stage</th>
                   <th className="px-4 py-3">Assigned Machinery</th>
                   <th className="px-4 py-3">Prepress Gate</th>
-                  <th className="px-4 py-3 text-right">Floor Actions</th>
+                  <th className="px-4 py-3 text-right min-w-[270px]">Floor Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#212933] text-[#CCD5DF]">
@@ -761,6 +794,9 @@ export default function AdminProductionPage() {
                             <span className="block text-[10px] text-[#6E7D8E]">
                               {job.proofVersion} Approved
                             </span>
+                            <span className="inline-block mt-0.5 px-1 py-0.2 rounded text-[9px] font-mono bg-emerald-950/60 border border-emerald-500/30 text-emerald-300 font-bold" title="ISO 15076-1 Compliant Binary ICC Profile embedded into PDF & PNG masters">
+                              ICC: FOGRA39
+                            </span>
                           </div>
                         ) : (
                           <div>
@@ -770,73 +806,102 @@ export default function AdminProductionPage() {
                             <span className="block text-[10px] text-[#6E7D8E]">
                               {job.proofVersion} Sign-off Req
                             </span>
+                            <span className="inline-block mt-0.5 px-1 py-0.2 rounded text-[9px] font-mono bg-slate-900 border border-slate-700 text-slate-400">
+                              ICC: Pending
+                            </span>
                           </div>
                         )}
                       </td>
 
-                      <td className="px-4 py-3.5 text-right space-x-1.5">
-                        <Button
-                          variant="dark-outline"
-                          size="sm"
-                          className={`text-xs py-1 h-7 border-[#384350] ${
-                            job.isProofApproved
-                              ? "bg-emerald-950/40 text-emerald-300 hover:bg-emerald-900/50 border-emerald-700"
-                              : "bg-[#1E252D] text-[#7E8B99] hover:bg-[#252E38]"
-                          }`}
-                          onClick={() => handleDownload(job)}
-                        >
-                          <IconDownload className="w-3 h-3 mr-1" /> PDF
-                        </Button>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex flex-col items-end gap-1.5 min-w-[280px] w-fit ml-auto">
+                          {/* Row 1: Primary Masters & Stage Advance */}
+                          <div className="flex items-center gap-1.5 flex-nowrap">
+                            <Button
+                              variant="dark-outline"
+                              size="sm"
+                              className={`h-7 px-2.5 text-[11px] font-mono border rounded whitespace-nowrap ${
+                                job.isProofApproved
+                                  ? "border-emerald-500/50 bg-emerald-950/40 text-emerald-300 hover:bg-emerald-900/60"
+                                  : "border-[#2E3844] bg-[#161C23] text-[#6E7D8E]"
+                              }`}
+                              onClick={() => handleDownload(job, "pdf")}
+                              title={job.isProofApproved ? "Download Print PDF" : "Locked - Requires Proof Approval"}
+                            >
+                              <IconDownload className="w-3 h-3 mr-1" /> PDF
+                            </Button>
 
-                        <button
-                          onClick={() => {
-                            setSelectedJobForMachine(job);
-                            setAllocatedMachine(job.machineAllocation);
-                            setAssignedOperator(job.assignedOperator);
-                          }}
-                          className="px-2 py-1 text-[11px] font-mono rounded bg-[#1C232B] border border-[#27323E] text-[#8E9CA9] hover:text-white"
-                        >
-                          Machine
-                        </button>
+                            <Button
+                              variant="dark-outline"
+                              size="sm"
+                              className={`h-7 px-2.5 text-[11px] font-mono border rounded whitespace-nowrap ${
+                                job.isProofApproved
+                                  ? "border-sky-500/50 bg-sky-950/40 text-sky-300 hover:bg-sky-900/60"
+                                  : "border-[#2E3844] bg-[#161C23] text-[#6E7D8E]"
+                              }`}
+                              onClick={() => handleDownload(job, "png")}
+                              title={job.isProofApproved ? "Download 300 DPI PNG Master" : "Locked - Requires Proof Approval"}
+                            >
+                              <IconDownload className="w-3 h-3 mr-1" /> PNG
+                            </Button>
 
-                        <button
-                          onClick={() => setSelectedJobForHistory(job)}
-                          className="px-2 py-1 text-[11px] font-mono rounded bg-[#1C232B] border border-[#27323E] text-[#8E9CA9] hover:text-white"
-                        >
-                          Audit
-                        </button>
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              className="h-7 px-3 text-[11px] font-mono font-bold bg-[#E65A28] hover:bg-[#CF4919] text-white rounded shadow-xs whitespace-nowrap"
+                              onClick={() => advanceStage(job)}
+                              title={`Advance ${job.orderNumber} to next pipeline stage`}
+                            >
+                              Next →
+                            </Button>
+                          </div>
 
-                        <button
-                          onClick={() => {
-                            setSelectedJobForTracking(job);
-                            setTrackingCourier("Royal Mail Tracked 48");
-                            setTrackingCode(`RM48-${Date.now().toString().slice(-8)}GB`);
-                            setTrackingUrlInput("");
-                            setTrackingStatus("DISPATCHED");
-                            setTrackingEstDelivery("2 business days");
-                          }}
-                          className="px-2 py-1 text-[11px] font-mono rounded bg-blue-950/50 border border-blue-700/50 text-blue-300 hover:bg-blue-900/60 transition-colors"
-                          title="Record courier tracking and dispatch order"
-                        >
-                          📦 Track
-                        </button>
+                          {/* Row 2: Secondary Floor Operations */}
+                          <div className="flex items-center gap-1.5 flex-nowrap">
+                            <button
+                              onClick={() => {
+                                setSelectedJobForMachine(job);
+                                setAllocatedMachine(job.machineAllocation);
+                                setAssignedOperator(job.assignedOperator);
+                              }}
+                              className="h-6 px-2 text-[10px] font-mono rounded bg-[#1A222B] border border-[#2B3744] text-[#8E9CA9] hover:text-white hover:bg-[#222D39] transition-colors whitespace-nowrap"
+                              title="Assign Machine Line & Operator"
+                            >
+                              Machine
+                            </button>
 
-                        <button
-                          onClick={() => handleRefund(job)}
-                          className="px-2 py-1 text-[11px] font-mono rounded bg-rose-950/40 border border-rose-800/40 text-rose-300 hover:bg-rose-900/60 transition-colors"
-                          title="Issue refund and cancel job"
-                        >
-                          Refund
-                        </button>
+                            <button
+                              onClick={() => {
+                                setSelectedJobForTracking(job);
+                                setTrackingCourier("Royal Mail Tracked 48");
+                                setTrackingCode(`RM48-${Date.now().toString().slice(-8)}GB`);
+                                setTrackingUrlInput("");
+                                setTrackingStatus("DISPATCHED");
+                                setTrackingEstDelivery("2 business days");
+                              }}
+                              className="h-6 px-2 text-[10px] font-mono rounded bg-blue-950/40 border border-blue-700/40 text-blue-300 hover:bg-blue-900/50 transition-colors whitespace-nowrap"
+                              title="Record courier tracking"
+                            >
+                              📦 Track
+                            </button>
 
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          className="text-xs py-1 h-7 bg-[#232B34] hover:bg-[#323D4A]"
-                          onClick={() => advanceStage(job)}
-                        >
-                          Next →
-                        </Button>
+                            <button
+                              onClick={() => setSelectedJobForHistory(job)}
+                              className="h-6 px-2 text-[10px] font-mono rounded bg-[#1A222B] border border-[#2B3744] text-[#8E9CA9] hover:text-white hover:bg-[#222D39] transition-colors whitespace-nowrap"
+                              title="Audit Lifecycle History"
+                            >
+                              Audit
+                            </button>
+
+                            <button
+                              onClick={() => handleRefund(job)}
+                              className="h-6 px-2 text-[10px] font-mono rounded bg-rose-950/30 border border-rose-800/30 text-rose-300 hover:bg-rose-900/50 transition-colors whitespace-nowrap"
+                              title="Issue refund and cancel job"
+                            >
+                              Refund
+                            </button>
+                          </div>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -1041,14 +1106,29 @@ export default function AdminProductionPage() {
                       </td>
                       <td className="px-4 py-3.5 text-[#8E9CA9]">{job.dueDate}</td>
                       <td className="px-4 py-3.5 text-right">
-                        <Button
-                          variant="dark-outline"
-                          size="sm"
-                          className="text-xs py-1 h-7"
-                          onClick={() => handleDownload(job)}
-                        >
-                          <IconDownload className="w-3 h-3 mr-1" /> PDF
-                        </Button>
+                        <div className="inline-flex items-center gap-1.5">
+                          <Button
+                            variant="dark-outline"
+                            size="sm"
+                            className="text-xs py-1 h-7 border-[#384350]"
+                            onClick={() => handleDownload(job, "pdf")}
+                          >
+                            <IconDownload className="w-3 h-3 mr-1" /> PDF
+                          </Button>
+
+                          <Button
+                            variant="dark-outline"
+                            size="sm"
+                            className={`text-xs py-1 h-7 border-[#384350] ${
+                              job.isProofApproved
+                                ? "border-sky-500/50 bg-sky-950/40 text-sky-300 hover:bg-sky-900/60"
+                                : "bg-[#1E252D] text-[#7E8B99] hover:bg-[#252E38]"
+                            }`}
+                            onClick={() => handleDownload(job, "png")}
+                          >
+                            <IconDownload className="w-3 h-3 mr-1" /> PNG
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -1356,7 +1436,7 @@ export default function AdminProductionPage() {
             <div className="flex items-start justify-between border-b border-[#232B34] pb-3">
               <div>
                 <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#E65A28]">
-                  Dispatch Logistics
+                  Dispatch Logistics (Simulated Mode)
                 </span>
                 <h3 className="text-lg font-bold text-white mt-0.5">
                   Courier Tracking: {selectedJobForTracking.orderNumber}
@@ -1391,7 +1471,17 @@ export default function AdminProductionPage() {
               </div>
 
               <div>
-                <label className="block text-[#8E9CA9] mb-1.5 uppercase">Consignment / Tracking Number</label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-[#8E9CA9] uppercase">Consignment / Tracking Number</label>
+                  <button
+                    type="button"
+                    disabled={isGeneratingLabel}
+                    onClick={handleAutoGenerateLabel}
+                    className="text-[11px] text-[#E65A28] hover:text-[#CF4919] font-bold underline flex items-center gap-1 cursor-pointer transition-colors"
+                  >
+                    {isGeneratingLabel ? "Connecting Carrier API..." : "⚡ Auto-Generate via Carrier API"}
+                  </button>
+                </div>
                 <input
                   type="text"
                   value={trackingCode}
@@ -1400,6 +1490,24 @@ export default function AdminProductionPage() {
                   className="w-full bg-[#1C232B] border border-[#27323E] rounded p-2.5 text-white font-mono"
                 />
               </div>
+
+              {generatedLabelBase64 && (
+                <div className="p-3 bg-emerald-950/40 border border-emerald-700/50 rounded flex items-center justify-between text-xs font-mono">
+                  <span className="text-emerald-300 font-bold">✓ 4x6" Thermal Label Generated</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const link = document.createElement("a");
+                      link.href = `data:application/pdf;base64,${generatedLabelBase64}`;
+                      link.download = `SHIPPING_LABEL_${selectedJobForTracking.orderNumber}.pdf`;
+                      link.click();
+                    }}
+                    className="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-600 text-white rounded text-[11px] font-bold"
+                  >
+                    ⭳ Download Label PDF
+                  </button>
+                </div>
+              )}
 
               <div>
                 <label className="block text-[#8E9CA9] mb-1.5 uppercase">
@@ -1443,10 +1551,10 @@ export default function AdminProductionPage() {
               </div>
 
               <div className="p-3 bg-[#0E1318] border border-[#232B34] rounded text-[11px] text-[#8E9CA9] space-y-1">
-                <div className="text-white font-bold">In-App Notification Trigger:</div>
-                <div>✓ Generates in-app alert for customer {selectedJobForTracking.customerName}</div>
-                <div>✓ Customer sees tracking link &amp; status live in customer dashboard</div>
-                <div className="text-amber-400">External courier webhook API: Standby (Manual tracking active)</div>
+                <div className="text-white font-bold">Courier Dispatch (Mock / Development Mode):</div>
+                <div className="text-amber-400">⚡ Operating in simulated mode — zero external business/courier accounts required</div>
+                <div>✓ Generates simulated tracking link &amp; customer alert for {selectedJobForTracking.customerName}</div>
+                <div className="text-emerald-400">✓ 4x6" printable thermal label generated in internal PDF mode</div>
               </div>
             </div>
 

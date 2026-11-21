@@ -95,7 +95,7 @@ export default function AdminLoginPage() {
               >
                 Go to Pipeline →
               </Button>
-              <Button variant="outline" size="sm" onClick={logout}>
+              <Button variant="dark-outline" size="sm" onClick={logout}>
                 Sign Out
               </Button>
             </div>

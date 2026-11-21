@@ -9,7 +9,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node scripts/verify-supabase-schema.mjs && node scripts/test-permissions.mjs && node --experimental-strip-types scripts/test-pricing.mjs && node --experimental-strip-types scripts/test-designer.mjs && node --experimental-strip-types scripts/test-approval-gate.mjs && node --experimental-strip-types scripts/test-orders-checkout.mjs && node --experimental-strip-types scripts/test-print-engine.mjs && node --experimental-strip-types scripts/test-admin-pipeline.mjs && node --experimental-strip-types scripts/test-email-notifications.mjs && node --experimental-strip-types scripts/test-security-audit.mjs && node --experimental-strip-types scripts/test-internal-services.mjs",
+    "test": "node scripts/verify-supabase-schema.mjs && node scripts/test-permissions.mjs && node --experimental-strip-types scripts/test-pricing.mjs && node --experimental-strip-types scripts/test-designer.mjs && node --experimental-strip-types scripts/test-approval-gate.mjs && node --experimental-strip-types scripts/test-orders-checkout.mjs && node --experimental-strip-types scripts/test-print-engine.mjs && node --experimental-strip-types scripts/test-admin-pipeline.mjs && node --experimental-strip-types scripts/test-email-notifications.mjs && node --experimental-strip-types scripts/test-security-audit.mjs && node --experimental-strip-types scripts/test-internal-services.mjs && node --experimental-strip-types scripts/test-carrier-and-xero.mjs",
     "test:schema": "node scripts/verify-supabase-schema.mjs",
     "test:permissions": "node scripts/test-permissions.mjs",
     "test:pricing": "node --experimental-strip-types scripts/test-pricing.mjs",
@@ -20,6 +20,7 @@
     "test:pipeline": "node --experimental-strip-types scripts/test-admin-pipeline.mjs",
     "test:email": "node --experimental-strip-types scripts/test-email-notifications.mjs",
     "test:internal": "node --experimental-strip-types scripts/test-internal-services.mjs",
+    "test:adapters": "node --experimental-strip-types scripts/test-carrier-and-xero.mjs",
     "test:security": "node --experimental-strip-types scripts/test-security-audit.mjs"
   },
   "dependencies": {

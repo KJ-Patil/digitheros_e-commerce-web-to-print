@@ -338,14 +338,18 @@ export function ConfiguratorForm({ product, divisionName }: ConfiguratorFormProp
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="mt-6 flex flex-col sm:flex-row gap-3">
+              {/* Action Buttons: 3 Equal-Sized Pillars */}
+              <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3 items-stretch">
                 <Link
                   href={`/designer?product=${product.slug}&w=${widthMm}&h=${heightMm}&qty=${quantity}`}
-                  className="flex-1"
+                  className="w-full block"
                 >
-                  <Button variant="primary" size="lg" className="w-full">
-                    Proceed to Designer &amp; Proof →
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    className="w-full h-12 text-xs sm:text-sm font-bold text-white px-2 text-center flex items-center justify-center shadow-sm"
+                  >
+                    Proceed to Designer
                   </Button>
                 </Link>
 
@@ -374,19 +378,27 @@ export function ConfiguratorForm({ product, divisionName }: ConfiguratorFormProp
                       console.warn("Cart storage warning:", e);
                     }
                   }}
-                  className="flex-1"
+                  className="w-full block"
                 >
-                  <Button variant="outline" size="lg" className="w-full border-[#13171C] text-[#13171C] hover:bg-[#FAF9F5]">
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="w-full h-12 text-xs sm:text-sm font-bold border-[#13171C] text-[#13171C] hover:bg-[#FAF9F5] px-2 text-center flex items-center justify-center"
+                  >
                     Add to Cart 🛒
                   </Button>
                 </Link>
 
                 <Link
                   href={`/checkout?product=${product.slug}&width=${widthMm}&height=${heightMm}&qty=${quantity}&material=${selectedMaterialCode || ""}&finish=${selectedFinishCode || ""}&cutType=${selectedCutCode || ""}`}
-                  className="flex-1"
+                  className="w-full block"
                 >
-                  <Button variant="outline" size="lg" className="w-full border-[#13171C] text-[#13171C] hover:bg-[#13171C] hover:text-white">
-                    Quick Checkout →
+                  <Button
+                    variant="secondary"
+                    size="lg"
+                    className="w-full h-12 text-xs sm:text-sm font-bold text-white px-2 text-center flex items-center justify-center"
+                  >
+                    Quick Checkout
                   </Button>
                 </Link>
               </div>

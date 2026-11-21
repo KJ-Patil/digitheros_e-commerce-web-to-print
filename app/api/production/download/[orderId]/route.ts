@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkProductionFileUnlockGate, findProofState } from "@/lib/proofs/proof-engine";
-import { generateProductionPrintFile } from "@/lib/print-engine/generator";
+import { generateProductionPrintFile, generateProductionPngFile } from "@/lib/print-engine/generator";
 
 /**
  * Server-Side Authoritative Production File Download Gate
@@ -69,6 +69,20 @@ export async function GET(
       });
     }
 
+    // Stream genuine binary 300 DPI PNG file if requested
+    if (format === "png") {
+      const pngResult = generateProductionPngFile(orderId);
+      return new NextResponse(new Uint8Array(pngResult.pngBuffer), {
+        status: 200,
+        headers: {
+          "Content-Type": "image/png",
+          "Content-Disposition": `attachment; filename="${pngResult.fileName}"`,
+          "Content-Length": String(pngResult.fileSizeBytes),
+          "X-Digital-Signature": pngResult.prepressSummary.digitalSignatureHash || "unverified",
+        },
+      });
+    }
+
     // Unlocked: Authorized production payload metadata
     return NextResponse.json({
       success: true,
@@ -78,6 +92,7 @@ export async function GET(
       orderNumber: proofState?.orderNumber || orderId,
       fileName: `${proofState?.orderNumber || orderId}_Production_Output_300DPI_Bleed.pdf`,
       downloadUrl: `/api/production/download/${orderId}?format=pdf`,
+      pngDownloadUrl: `/api/production/download/${orderId}?format=png`,
       fileSize: "14.2 MB",
       status: "READY_FOR_PRESS",
       printSpecs: {
@@ -86,6 +101,15 @@ export async function GET(
         bleed: "3.0 mm",
         safeZone: "3.0 mm inner",
         colorProfile: "CMYK (ISO Coated v2 / FOGRA39)",
+        iccProfile: {
+          name: "ISO Coated v2 (ECI) / FOGRA39",
+          standard: "ISO 15076-1 / ICC.1:2010-12",
+          class: "prtr (Printer)",
+          colorSpace: "CMYK",
+          sizeBytes: 488,
+          isEmbeddedBinary: true,
+          downloadUrl: "/api/production/icc/FOGRA39",
+        },
         cropMarks: true,
         spotSeparation: "CutContour (Magenta #FF00FF)",
       },

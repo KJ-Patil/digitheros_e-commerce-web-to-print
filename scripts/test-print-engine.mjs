@@ -7,6 +7,8 @@ import {
   mmToPoints,
   mmToPixels300Dpi,
   generateProductionPrintFile,
+  generateProductionPngFile,
+  buildFogra39BinaryIccProfile,
 } from "../lib/print-engine/generator.ts";
 import {
   validateAndMapCsv,
@@ -139,6 +141,65 @@ const batchMergeResult = executeVariableMergeJob("ORD-2026-0892", large500Csv, "
 assert("Test 6b: 500-runner batch merge job completed successfully", batchMergeResult.status === "COMPLETED" && batchMergeResult.totalRecords === 500);
 assert("Test 6c: Batch merge output filename formatted with record count and 300DPI", batchMergeResult.outputFileName === "ORD-2026-0892_BatchMerge_500Records_300DPI.pdf");
 assert("Test 6d: Estimated output archive size computed for press operator", batchMergeResult.outputFileSizeBytes > 1000000);
+
+// -------------------------------------------------------------------------
+// TEST 7: High-Resolution 300 DPI Standalone Raster PNG Master Output
+// -------------------------------------------------------------------------
+let unapprovedPngBlocked = false;
+try {
+  generateProductionPngFile("ORD-2026-0892"); // Unapproved
+} catch (e) {
+  if (e.message.includes("APPROVAL_GATE_LOCKED")) {
+    unapprovedPngBlocked = true;
+  }
+}
+assert("Test 7a: PNG generation for unapproved order is locked by gate", unapprovedPngBlocked);
+
+const pngResult = generateProductionPngFile("ORD-2026-0891");
+assert("Test 7b: PNG file generated for approved order ORD-2026-0891", pngResult !== null && Buffer.isBuffer(pngResult.pngBuffer));
+
+const pngHeader = pngResult.pngBuffer.subarray(0, 8);
+const expectedHeader = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+assert("Test 7c: PNG starts with official 8-byte RFC 2083 signature", pngHeader.equals(expectedHeader));
+
+const pngStr = pngResult.pngBuffer.toString("latin1");
+assert("Test 7d: PNG contains IHDR chunk with positive dimensions", pngStr.includes("IHDR") && pngResult.prepressSummary.dimensionsPx.width > 0);
+assert("Test 7e: PNG contains pHYs chunk setting 300 DPI (11811 pixels/meter)", pngStr.includes("pHYs"));
+assert("Test 7f: PNG contains tEXt prepress metadata with digital signature and color profile",
+  pngStr.includes("tEXt") &&
+  pngStr.includes("CutContour") &&
+  pngStr.includes("300 DPI")
+);
+assert("Test 7g: PNG contains IDAT compressed scanlines and IEND chunk", pngStr.includes("IDAT") && pngStr.includes("IEND"));
+assert("Test 7h: Output filename includes order number and 300DPI", pngResult.fileName.includes("ORD-2026-0891_Production_Master_300DPI"));
+
+// -------------------------------------------------------------------------
+// TEST 8: ISO 15076-1 / ICC.1 Binary Prepress Profile Embedding (PDF & PNG)
+// -------------------------------------------------------------------------
+const binaryIcc = buildFogra39BinaryIccProfile();
+assert("Test 8a: Binary ICC profile generated with 488 bytes", binaryIcc.length === 488);
+assert("Test 8b: ICC header contains magic profile signature 'acsp'", binaryIcc.subarray(36, 40).toString("ascii") === "acsp");
+assert("Test 8c: ICC header specifies printer class 'prtr' and CMYK color space",
+  binaryIcc.subarray(12, 16).toString("ascii") === "prtr" &&
+  binaryIcc.subarray(16, 20).toString("ascii") === "CMYK"
+);
+assert("Test 8d: PDF production stream embeds /ICCBased ColorSpace object",
+  printResult.pdfContent.includes("/ICCBased") &&
+  printResult.pdfContent.includes("/Alternate /DeviceCMYK")
+);
+assert("Test 8e: PDF production stream embeds /OutputIntents dictionary with FOGRA39",
+  printResult.pdfContent.includes("/OutputIntents") &&
+  printResult.pdfContent.includes("FOGRA39") &&
+  printResult.pdfContent.includes("GTS_PDFX")
+);
+assert("Test 8f: PNG production master embeds compliant iCCP chunk",
+  pngStr.includes("iCCP") &&
+  pngStr.includes("ISO Coated v2 / FOGRA39")
+);
+assert("Test 8g: Prepress summary flags binary ICC profile as embedded",
+  printResult.prepressSummary.iccProfile?.isEmbeddedBinary === true &&
+  pngResult.prepressSummary.iccProfile?.isEmbeddedBinary === true
+);
 
 console.log("==================================================================");
 console.log(`PRINT ENGINE TEST RESULTS: ${passed} passed, ${failed} failed`);

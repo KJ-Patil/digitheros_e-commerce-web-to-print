@@ -16,12 +16,12 @@ export function Button({
   ...props
 }: ButtonProps) {
   const baseStyles =
-    "inline-flex items-center justify-center font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none select-none rounded cursor-pointer";
+    "inline-flex items-center justify-center font-medium text-center leading-normal transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none select-none rounded cursor-pointer";
 
   const sizeStyles = {
-    sm: "text-xs px-2.5 py-1.5 h-8 gap-1.5",
-    md: "text-sm px-4 py-2 h-10 gap-2",
-    lg: "text-base px-6 py-2.5 h-12 gap-2.5 tracking-tight",
+    sm: "text-xs px-2.5 py-1.5 min-h-8 h-auto gap-1.5",
+    md: "text-sm px-4 py-2 min-h-10 h-auto gap-2",
+    lg: "text-sm sm:text-base px-4 sm:px-6 py-2.5 min-h-12 h-auto gap-2.5 tracking-tight leading-snug",
   };
 
   const variantStyles = {
@@ -39,14 +39,21 @@ export function Button({
       "bg-red-600 text-white hover:bg-red-700 active:bg-red-800 focus-visible:ring-red-600",
   };
 
+  let resolvedSize = sizeStyles[size] || sizeStyles.md;
   let resolvedVariant = variantStyles[variant] || variantStyles.primary;
 
+  // Resolve height conflicts if caller provided an explicit height
+  if (/\bh-\S+/.test(className)) {
+    resolvedSize = resolvedSize.replace(/\b(?:min-)?h-\S+/g, "").trim();
+  }
   // Resolve background and text conflicts if caller provided custom classes
   if (/\bbg-\S+/.test(className)) {
     resolvedVariant = resolvedVariant.replace(/\bbg-\S+/g, "").trim();
   }
-  if (/\btext-\S+/.test(className)) {
-    resolvedVariant = resolvedVariant.replace(/\btext-\S+/g, "").trim();
+  // Only strip text color if caller explicitly provided a text color (NOT font size like text-xs/text-sm or text-center)
+  const textColorMatch = className.match(/\btext-(?:white|black|current|transparent|\[#[0-9a-fA-F]+\]|[a-z]+-\d+)\b/);
+  if (textColorMatch) {
+    resolvedVariant = resolvedVariant.replace(/\btext-(?:white|black|current|transparent|\[#[0-9a-fA-F]+\]|[a-z]+-\d+)\b/g, "").trim();
   }
   if (/\bborder-\S+/.test(className)) {
     resolvedVariant = resolvedVariant.replace(/\bborder-\S+/g, "").trim();
@@ -57,7 +64,7 @@ export function Button({
 
   return (
     <button
-      className={`${baseStyles} ${sizeStyles[size]} ${resolvedVariant} ${className}`.replace(/\s+/g, " ").trim()}
+      className={`${baseStyles} ${resolvedSize} ${resolvedVariant} ${className}`.replace(/\s+/g, " ").trim()}
       disabled={disabled || isLoading}
       {...props}
     >

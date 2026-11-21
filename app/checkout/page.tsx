@@ -222,13 +222,13 @@ function CheckoutContent() {
             </div>
             <div className="space-y-2">
               <span className="text-xs font-mono font-bold uppercase tracking-widest text-emerald-800">
-                Payment Authorized • Order Captured
+                SIMULATED PAYMENT AUTHORIZED • ORDER CAPTURED (MOCK MODE)
               </span>
               <h1 className="text-2xl sm:text-3xl font-extrabold text-emerald-950 tracking-tight">
                 Thank you! Order {completedOrder.orderNumber} is Confirmed.
               </h1>
               <p className="text-sm text-emerald-900/80 leading-relaxed">
-                Your payment of <strong>£{(completedOrder.totalCents / 100).toFixed(2)}</strong> (including £{(completedOrder.vatCents / 100).toFixed(2)} UK VAT) has been verified. Initial proof rendering slot <strong>v1</strong> has been queued for your approval.
+                Your simulated payment of <strong>£{(completedOrder.totalCents / 100).toFixed(2)}</strong> (including £{(completedOrder.vatCents / 100).toFixed(2)} UK VAT) has been authorized in development mode. No real card was charged. Initial proof rendering slot <strong>v1</strong> has been queued for your approval.
               </p>
             </div>
           </div>
@@ -283,13 +283,19 @@ function CheckoutContent() {
         <div className="flex items-center gap-2 text-xs font-mono text-[#7D8A98]">
           <Link href="/#calculator" className="hover:text-[#13171C]">Configurator</Link>
           <span>/</span>
-          <span className="text-[#E65A28] font-bold">Stripe Checkout</span>
+          <span className="text-[#E65A28] font-bold">Simulated Checkout</span>
         </div>
-        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#13171C] mt-2">
-          Secure Order Checkout
-        </h1>
+        <div className="flex flex-wrap items-center justify-between gap-3 mt-2">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#13171C]">
+            Order Checkout
+          </h1>
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded text-xs font-mono font-bold bg-amber-100 text-amber-900 border border-amber-300">
+            <IconShield className="w-4 h-4 text-amber-700" />
+            SIMULATED PAYMENT MODE (No live charge)
+          </span>
+        </div>
         <p className="text-sm text-[#596675] mt-1">
-          Review specifications, confirm delivery destination, and authorize test payment.
+          Review specifications, confirm delivery destination, and authorize a simulated test order without external card charges.
         </p>
       </div>
 
