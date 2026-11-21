@@ -601,7 +601,17 @@ export function processPaymentWebhook(event: {
     };
   }
 
-  const session = event.data.object;
+  const session = event.data.object as {
+    id: string;
+    order_id?: string;
+    payment_status?: string;
+    payment_intent?: string;
+    amount_total?: number;
+    card_brand?: string;
+    card_last4?: string;
+    decline_reason?: string;
+    metadata?: Record<string, string>;
+  };
   const order = ORDERS_STORE.find(
     (o) =>
       o.paymentDetails.sessionId === session.id ||
